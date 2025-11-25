@@ -1,0 +1,134 @@
+@keyframes popupReveal {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(1000px, calc(100% - 40px));
+  transform: translate(-50%, -50%);
+  background: var(--bg-elevated-strong);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-xl);
+  padding: 32px;
+  animation: popupReveal 260ms ease;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.popup>button {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+  padding: 0;
+}
+
+.popup-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.popup-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.session-details {
+  flex: 2;
+  display: grid;
+  gap: 8px;
+}
+
+.session-details p {
+  margin: 0;
+}
+
+.session-details strong {
+  color: var(--text-primary);
+}
+
+.qr-code {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.QRCode {
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.copybtn {
+  width: 100%;
+}
+
+.scrollable-content {
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+}
+
+.scrollable-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.scrollable-content thead {
+  background: linear-gradient(135deg,
+      rgba(127, 94, 255, 0.35),
+      rgba(0, 198, 255, 0.3));
+}
+
+.scrollable-content th,
+.scrollable-content td {
+  padding: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.92rem;
+}
+
+.scrollable-content tr:last-child td {
+  border-bottom: none;
+}
+
+.scrollable-content img {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: zoom-in;
+}
+
+@media (max-width: 768px) {
+  .popup {
+    padding: 24px 20px;
+  }
+
+  .popup-content {
+    flex-direction: column;
+  }
+}

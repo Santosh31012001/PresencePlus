@@ -1,0 +1,271 @@
+.register-main {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  gap: 32px;
+  padding: 60px clamp(20px, 5vw, 80px);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.register-left,
+.register-right {
+  flex: 1 1 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-left img {
+  width: min(420px, 90%);
+  filter: drop-shadow(0 25px 45px rgba(0, 0, 0, 0.45));
+}
+
+.register-right-container {
+  width: 100%;
+  max-width: 520px;
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.register-logo img {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px;
+}
+
+.register-center {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.register-center h2 {
+  font-size: clamp(2.1rem, 3vw, 2.6rem);
+  margin: 0;
+}
+
+.register-center p {
+  margin-bottom: 24px;
+}
+
+.register-right form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.register-right form input,
+.register-right form select {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  color: var(--text-primary);
+  padding: 14px 16px;
+  font-size: 0.95rem;
+  transition: border-color var(--transition-fast),
+    background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.register-right form input:focus {
+  outline: none;
+  border-color: rgba(130, 108, 255, 0.75);
+  background: rgba(138, 123, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(138, 123, 255, 0.2);
+}
+
+.register-right form input:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.register-right form button {
+  width: 100%;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.register-right form button[type="button"] {
+  background: linear-gradient(135deg, rgba(138, 123, 255, 0.15), rgba(31, 182, 255, 0.12));
+  border: 1px solid rgba(138, 123, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(138, 123, 255, 0.15);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.register-right form button[type="button"]:hover {
+  background: linear-gradient(135deg, rgba(138, 123, 255, 0.25), rgba(31, 182, 255, 0.2));
+  border-color: rgba(138, 123, 255, 0.5);
+  box-shadow: 0 6px 20px rgba(138, 123, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.register-right form button[type="submit"] {
+  background-image: linear-gradient(135deg, #7f5eff, #1fb6ff);
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-soft);
+}
+
+.register-right form button[type="submit"]:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
+}
+
+.register-center-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.register-center-buttons button {
+  margin-top: 8px;
+}
+
+.register-bottom-p {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.register-bottom-p a {
+  color: var(--color-secondary) !important;
+  text-decoration: none;
+}
+
+.register-bottom-p a:hover {
+  text-decoration: underline;
+}
+
+.pass-input-div {
+  position: relative;
+}
+
+.pass-input-div button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.pass-input-div button img {
+  width: 22px;
+}
+
+.first-slide,
+.second-slide,
+.third-slide,
+.fourth-slide,
+.page1,
+.page2,
+.page3 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.register-main form select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 14px 42px 14px 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast),
+    background var(--transition-fast), box-shadow var(--transition-fast);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23f4f7ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+
+.register-main form select:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.register-main form select:focus {
+  outline: none;
+  border-color: rgba(130, 108, 255, 0.75);
+  background: rgba(138, 123, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(138, 123, 255, 0.2);
+}
+
+.register-main form select option {
+  color: var(--text-primary);
+  background-color: var(--bg-elevated-strong);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  padding: 14px 16px;
+  border: none;
+  font-size: 0.95rem;
+}
+
+.register-main form select option[disabled] {
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.register-main form select option:hover {
+  background: linear-gradient(135deg, rgba(138, 123, 255, 0.2), rgba(31, 182, 255, 0.15));
+}
+
+.register-main form select option:checked {
+  background: linear-gradient(135deg, rgba(138, 123, 255, 0.35), rgba(31, 182, 255, 0.25));
+  color: var(--text-primary);
+}
+
+.register-main form select option:focus {
+  background: linear-gradient(135deg, rgba(138, 123, 255, 0.3), rgba(31, 182, 255, 0.2));
+  color: var(--text-primary);
+}
+
+.register-main form input[type="date"] {
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.register-main form input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1);
+  opacity: 0.8;
+  padding: 4px;
+  border-radius: 4px;
+  transition: opacity var(--transition-fast);
+}
+
+.register-main form input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: rgba(138, 123, 255, 0.2);
+}
+
+.register-main form input[type="date"]::-webkit-calendar-picker-indicator:focus {
+  opacity: 1;
+  background: rgba(138, 123, 255, 0.3);
+}
+
+@media (max-width: 520px) {
+  .register-right-container {
+    padding: 28px;
+  }
+}

@@ -1,0 +1,119 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.new-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-elevated-strong);
+  padding: 36px 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-xl);
+  width: min(480px, calc(100% - 32px));
+  animation: fadeIn 260ms ease;
+}
+
+.new-popup>button {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.9rem;
+  padding: 0;
+  box-shadow: none;
+}
+
+.popup-inner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.popup-inner h5 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.popup-inner form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.popup-inner input,
+.popup-inner select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-weight: 500;
+  width: 100%;
+}
+
+.popup-inner select {
+  appearance: none;
+  padding-right: 48px;
+  background-image: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.02)),
+    url("data:image/svg+xml,%3Csvg width='14' height='8' viewBox='0 0 14 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 1.5L7 6.5L12.5 1.5' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  background-size: 16px;
+  letter-spacing: 0.2px;
+}
+
+.popup-inner select option {
+  color: var(--text-primary);
+  background-color: #070c1b;
+  font-weight: 500;
+}
+
+.popup-inner select option:checked {
+  background-color: rgba(138, 123, 255, 0.25);
+}
+
+.popup-inner button[type="submit"] {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.popup-inner small {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.qr-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.QRCode {
+  border-radius: var(--radius-md);
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

@@ -1,0 +1,25 @@
+.logout-main {
+  min-height: calc(100vh - 120px);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+  padding: 40px 20px;
+  background: radial-gradient(circle at 30% 30%,
+      rgba(127, 94, 255, 0.25),
+      transparent 55%) rgba(4, 7, 20, 0.4);
+}
+
+.logout-main h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 0;
+}
+
+.logout-main p {
+  font-size: 1rem;
+  margin: 0;
+  color: var(--text-muted);
+}

@@ -1,0 +1,57 @@
+@import "./Dashboard.css";
+
+.student-dashboard .session-list {
+    width: 100%;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
+    overflow-x: auto;
+}
+
+.student-dashboard table {
+    min-width: 720px;
+}
+
+.student-dashboard thead {
+    background: linear-gradient(135deg,
+            rgba(127, 94, 255, 0.35),
+            rgba(0, 198, 255, 0.3));
+}
+
+.student-dashboard th,
+.student-dashboard td {
+    padding: 18px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 0.95rem;
+}
+
+.student-dashboard tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.student-dashboard tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.student-dashboard img {
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    max-width: 140px;
+}
+
+.student-dashboard .distance {
+    font-weight: 700;
+}
+
+.student-dashboard h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+    .student-dashboard .session-list {
+        padding: 18px 16px;
+    }
+}
