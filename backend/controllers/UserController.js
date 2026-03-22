@@ -34,17 +34,17 @@ async function Login(req, res) {
     res.status(400).json({ message: "No such User" });
   }
 }
-// Create a new user
+// Create a new user  or we can say register
 async function Signup(req, res) {
   try {
     console.log('Signup request body:', req.body);  // Debug log
-    
+
     const { name, email, pno, dob, password, type } = req.body;
 
     // Validate required fields
     if (!name || !email || !pno || !dob || !password || !type) {
-      return res.status(400).json({ 
-        message: "Missing required fields", 
+      return res.status(400).json({
+        message: "Missing required fields",
         required: ['name', 'email', 'pno', 'dob', 'password', 'type'],
         received: Object.keys(req.body)
       });
@@ -52,7 +52,7 @@ async function Signup(req, res) {
 
     // Validate type
     if (type !== 'student' && type !== 'teacher') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Invalid type. Must be 'student' or 'teacher'",
         received: type
       });
@@ -66,16 +66,16 @@ async function Signup(req, res) {
         dob: dob,
         password: password,
       });
-      
+
       const existingUser = await Student.findOne({ email: email }).exec();
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
       }
-      
+
       const newUser = await user.save();
       console.log('Created new student:', email);  // Debug log
       res.status(201).json(newUser);
-      
+
     } else {
       const user = new Teacher({
         name: name,
@@ -84,20 +84,20 @@ async function Signup(req, res) {
         dob: dob,
         password: password,
       });
-      
+
       const existingUser = await Teacher.findOne({ email: email }).exec();
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
       }
-      
+
       const newUser = await user.save();
       console.log('Created new teacher:', email);  // Debug log
       res.status(201).json(newUser);
     }
-    
+
   } catch (err) {
     console.error('Signup error:', err);  // Debug log
-    res.status(400).json({ 
+    res.status(400).json({
       message: "Registration failed",
       error: err.message,
       details: err.errors ? Object.keys(err.errors).map(key => ({
