@@ -19,13 +19,12 @@ export default class Mailer {
       text: text,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log(error);
-        return false;
-      } else {
-        return info;
-      }
-    });
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      return info;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   }
 }
