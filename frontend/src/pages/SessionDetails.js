@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import QRCode from "qrcode.react";
 import "../styles/SessionDetails.css";
+import MapView from "../components/MapView";
 
 const SessionDetails = (props) => {
   const [qr, setQR] = useState("");
@@ -80,6 +81,15 @@ const SessionDetails = (props) => {
             </button>
           </div>
         </div>
+
+        <div style={{ padding: "0 20px 20px 20px" }}>
+          <MapView 
+            sessionLocation={props.currentSession[0].location} 
+            radius={props.currentSession[0].radius} 
+            attendance={props.currentSession[0].attendance} 
+          />
+        </div>
+
         <div className="student-list scrollable-content">
           <p>Students Attended:</p>
           <table>
