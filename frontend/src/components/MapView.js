@@ -1,5 +1,5 @@
 import React from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -68,19 +68,45 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
           });
 
           return (
-            <Marker key={idx} position={stPos} icon={customIcon}>
-              <Popup>
-                <strong>{student.regno}</strong>
-                <br />
-                {student.student_email && (
-                  <>
-                    <span>{student.student_email}</span>
-                    <br />
-                  </>
-                )}
-                Distance: {student.distance}m
-              </Popup>
-            </Marker>
+            <React.Fragment key={idx}>
+              <Polyline
+                positions={[position, stPos]}
+                pathOptions={{
+                  color: isInside ? "green" : "red",
+                  dashArray: "4 4",
+                  weight: 2,
+                }}
+              >
+                <Tooltip permanent direction="center" className="bg-transparent border-0 shadow-none text-xs font-bold">
+                  {Math.round(parseFloat(student.distance))}m
+                </Tooltip>
+              </Polyline>
+
+              <Circle
+                center={stPos}
+                radius={15}
+                pathOptions={{ color: "orange", fillColor: "orange", fillOpacity: 0.2, stroke: false }}
+              />
+
+              <Marker position={stPos} icon={customIcon}>
+                <Popup>
+                  <div style={{ minWidth: "160px" }}>
+                    <h4 style={{ margin: "0 0 5px 0", color: "#333" }}>{student.regno}</h4>
+                    {student.student_email && (
+                      <div style={{ fontSize: "12px", color: "#666", marginBottom: "5px" }}>
+                        {student.student_email}
+                      </div>
+                    )}
+                    <div style={{ margin: "10px 0 5px 0", padding: "5px", borderRadius: "5px", backgroundColor: isInside ? "#d4edda" : "#f8d7da", color: isInside ? "#155724" : "#721c24", fontWeight: "bold", textAlign: "center" }}>
+                      Status: {isInside ? "Verified" : "Out of bounds"}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#888", textAlign: "center" }}>
+                      Distance: {student.distance}m (±15m)
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            </React.Fragment>
           );
         })}
     </MapContainer>
