@@ -1,5 +1,5 @@
 import React from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Tooltip, LayerGroup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -68,7 +68,7 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
           });
 
           return (
-            <React.Fragment key={idx}>
+            <LayerGroup key={idx}>
               <Polyline
                 positions={[position, stPos]}
                 pathOptions={{
@@ -76,11 +76,7 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
                   dashArray: "4 4",
                   weight: 2,
                 }}
-              >
-                <Tooltip permanent direction="center" className="bg-transparent border-0 shadow-none text-xs font-bold">
-                  {Math.round(parseFloat(student.distance))}m
-                </Tooltip>
-              </Polyline>
+              />
 
               <Circle
                 center={stPos}
@@ -106,7 +102,7 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
                   </div>
                 </Popup>
               </Marker>
-            </React.Fragment>
+            </LayerGroup>
           );
         })}
     </MapContainer>
