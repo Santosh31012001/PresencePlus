@@ -1,5 +1,5 @@
-import React from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, Tooltip } from "react-leaflet";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -13,18 +13,44 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Auto-fits map to show all markers (teacher + all students)
+function FitBounds({ positions }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!positions || positions.length === 0) return;
+    if (positions.length === 1) {
+      map.setView(positions[0], 19);
+      return;
+    }
+    const bounds = L.latLngBounds(positions);
+    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 19 });
+  }, [map, positions]);
+  return null;
+}
+
 const MapView = ({ sessionLocation, radius, attendance }) => {
   if (!sessionLocation) return null;
-  // sessionLocation is string like "28.7041,77.1025"
+
   const [lat, lng] = sessionLocation.split(",").map(Number);
   const position = [lat, lng];
+
+  // Collect all positions: teacher + students (for fitBounds)
+  const allPositions = [position];
+  if (attendance) {
+    attendance.forEach((student) => {
+      if (student.Location) {
+        const [stLat, stLng] = student.Location.split(",").map(Number);
+        allPositions.push([stLat, stLng]);
+      }
+    });
+  }
 
   return (
     <MapContainer
       center={position}
-      zoom={18}
+      zoom={19}
       style={{
-        height: "400px",
+        height: "450px",
         width: "100%",
         marginTop: "20px",
         borderRadius: "10px",
@@ -35,6 +61,10 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
+
+      {/* Auto-fit to all markers */}
+      <FitBounds positions={allPositions} />
+
       {/* Classroom Marker */}
       <Marker position={position}>
         <Popup>
@@ -49,7 +79,7 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
         pathOptions={{ color: "blue", fillColor: "blue", fillOpacity: 0.1 }}
       />
 
-      {/* Student Markers */}
+      {/* Student Markers + Lines */}
       {attendance &&
         attendance.map((student, idx) => {
           if (!student.Location) return null;
@@ -57,35 +87,26 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
           const stPos = [stLat, stLng];
           const isInside = parseFloat(student.distance) <= parseFloat(radius);
 
-          // Custom colored dot icon for students
           const customIcon = new L.DivIcon({
             className: "custom-div-icon",
             html: `<div style="background-color: ${
-              isInside ? "green" : "red"
-            }; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
+              isInside ? "#22c55e" : "#ef4444"
+            }; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.5);"></div>`,
             iconSize: [20, 20],
             iconAnchor: [10, 10],
           });
 
           return (
-            <React.Fragment key={idx}>
+            <React.Fragment key={`student-${idx}`}>
+              {/* Line from classroom to student */}
               <Polyline
                 positions={[position, stPos]}
                 pathOptions={{
-                  color: isInside ? "green" : "red",
-                  dashArray: "4 4",
-                  weight: 2,
+                  color: isInside ? "#22c55e" : "#ef4444",
+                  dashArray: "6, 5",
+                  weight: 3,
+                  opacity: 1,
                 }}
-              >
-                <Tooltip permanent direction="center" className="bg-transparent border-0 shadow-none text-xs font-bold">
-                  {Math.round(parseFloat(student.distance))}m
-                </Tooltip>
-              </Polyline>
-
-              <Circle
-                center={stPos}
-                radius={15}
-                pathOptions={{ color: "orange", fillColor: "orange", fillOpacity: 0.2, stroke: false }}
               />
 
               <Marker position={stPos} icon={customIcon}>
@@ -97,11 +118,21 @@ const MapView = ({ sessionLocation, radius, attendance }) => {
                         {student.student_email}
                       </div>
                     )}
-                    <div style={{ margin: "10px 0 5px 0", padding: "5px", borderRadius: "5px", backgroundColor: isInside ? "#d4edda" : "#f8d7da", color: isInside ? "#155724" : "#721c24", fontWeight: "bold", textAlign: "center" }}>
-                      Status: {isInside ? "Verified" : "Out of bounds"}
+                    <div
+                      style={{
+                        margin: "10px 0 5px 0",
+                        padding: "5px",
+                        borderRadius: "5px",
+                        backgroundColor: isInside ? "#d4edda" : "#f8d7da",
+                        color: isInside ? "#155724" : "#721c24",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                      }}
+                    >
+                      Status: {isInside ? "Verified ✓" : "Out of bounds ✗"}
                     </div>
                     <div style={{ fontSize: "11px", color: "#888", textAlign: "center" }}>
-                      Distance: {student.distance}m (±15m)
+                      Distance: {student.distance}m
                     </div>
                   </div>
                 </Popup>
