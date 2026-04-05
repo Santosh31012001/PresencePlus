@@ -110,9 +110,9 @@ const NewSession = ({ togglePopup }) => {
               autoComplete="off"
             />
             <select name="radius" id="radius" autoComplete="off">
-            <option value="150">20 meters</option>
+              <option value="15">15 meters</option>
+              <option value="20">20 meters</option>
               <option value="50">50 meters</option>
-              <option value="75">75 meters</option>
               <option value="100">100 meters</option>
             </select>
             <button type="submit">Create Session</button>

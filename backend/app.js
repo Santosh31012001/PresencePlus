@@ -7,11 +7,29 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/userRoutes.js";
 import SessionRoutes from "./routes/SessionRoutes.js";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 // Initialize the app
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB;
+
+// Expose io object to all routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 // Middleware
 app.use(
   cors({
@@ -44,6 +62,6 @@ app.use("/users", userRoutes);
 app.use("/sessions", SessionRoutes);
 
 // Start the server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

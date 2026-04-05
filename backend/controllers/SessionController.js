@@ -101,70 +101,92 @@ async function AttendSession(req, res) {
   let tokenData = req.user;
   let { session_id, teacher_email, regno, IP, student_email, Location, date } =
     req.body;
-  
+
   // Check if file was uploaded
   if (!req.file) {
-    return res.status(400).json({ 
-      message: "Image file is required. Please ensure the file is sent with field name 'image'." 
+    return res.status(400).json({
+      message: "Image file is required. Please ensure the file is sent with field name 'image'.",
     });
   }
-  
+
   let imageName = req.file.filename;
   console.log(imageName);
 
   try {
-    let present = false;
     const teacher = await Teacher.findOne({ email: teacher_email });
-    let session_details = {};
-    teacher.sessions.map(async (session) => {
-      if (session.session_id === session_id) {
-        let distance = checkStudentDistance(Location, session.location);
-        session.attendance.map((student) => {
-          if (
-            student.regno === regno ||
-            student.student_email === student_email
-          ) {
-            present = true;
-          }
-        });
-        if (!present) {
-          res.status(200).json({ message: "Attendance marked successfully" });
-          await uploadImage(imageName).then((result) => {
-            session_details = {
-              session_id: session.session_id,
-              teacher_email: teacher.email,
-              name: session.name,
-              date: session.date,
-              time: session.time,
-              duration: session.duration,
-              distance: distance,
-              radius: session.radius,
-              image: result,
-            };
-            session.attendance.push({
-              regno,
-              image: result,
-              date,
-              IP,
-              student_email: tokenData.email,
-              Location,
-              distance,
-            });
-          });
-          await Teacher.findOneAndUpdate(
-            { email: teacher_email },
-            { sessions: teacher.sessions }
-          );
-          await Student.findOneAndUpdate(
-            { email: student_email },
-            { $push: { sessions: session_details } }
-          );
-        }
+
+    // Use for...of so async/await works correctly inside the loop
+    for (const session of teacher.sessions) {
+      if (session.session_id !== session_id) continue;
+
+      // ── Duplicate check ──────────────────────────────────────────
+      const alreadyMarked = session.attendance.some(
+        (student) =>
+          student.regno === regno ||
+          student.student_email === student_email
+      );
+
+      if (alreadyMarked) {
+        return res.status(200).json({ message: "Attendance already marked" });
       }
-    });
-    if (present) {
-      res.status(200).json({ message: "Attendance already marked" });
+      // ─────────────────────────────────────────────────────────────
+
+      let distance = checkStudentDistance(Location, session.location);
+
+      // Upload image and mark attendance
+      const imageUrl = await uploadImage(imageName);
+
+      const session_details = {
+        session_id: session.session_id,
+        teacher_email: teacher.email,
+        name: session.name,
+        date: session.date,
+        time: session.time,
+        duration: session.duration,
+        distance: distance,
+        radius: session.radius,
+        image: imageUrl,
+      };
+
+      session.attendance.push({
+        regno,
+        image: imageUrl,
+        date,
+        IP,
+        student_email: tokenData.email,
+        Location,
+        distance,
+      });
+
+      await Teacher.findOneAndUpdate(
+        { email: teacher_email },
+        { sessions: teacher.sessions }
+      );
+
+      await Student.findOneAndUpdate(
+        { email: student_email },
+        { $push: { sessions: session_details } }
+      );
+
+      req.io.emit("new_attendance", {
+        session_id: session.session_id,
+        student: {
+          regno,
+          image: imageUrl,
+          date,
+          IP,
+          student_email: tokenData.email,
+          Location,
+          distance,
+        },
+      });
+
+      return res.status(200).json({ message: "Attendance marked successfully" });
     }
+
+    // If no matching session found
+    return res.status(404).json({ message: "Session not found" });
+
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
