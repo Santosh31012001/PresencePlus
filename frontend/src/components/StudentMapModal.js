@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useCallback, memo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -12,114 +12,60 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../styles/StudentMapModal.css";
 
-// ── Fix default Leaflet icon path ──────────────────────────────────────────
+// ── Fix default Leaflet icon (module-level — runs once) ────────────────────
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 const DefaultIcon = L.icon({ iconUrl, shadowUrl: iconShadow, iconAnchor: [12, 41] });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// ── Teacher pin (purple gradient) ──────────────────────────────────────────
-const teacherIcon = new L.DivIcon({
+// ── Teacher icon (module-level constant — created once, never recreated) ───
+const TEACHER_ICON = new L.DivIcon({
   className: "",
-  html: `
-    <div style="
-      width:38px; height:38px;
-      background: linear-gradient(135deg,#8a7bff,#1fb6ff);
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      border:3px solid #fff;
-      box-shadow:0 4px 16px rgba(138,123,255,0.6);
-    ">
-      <div style="
-        transform:rotate(45deg);
-        display:flex; align-items:center; justify-content:center;
-        height:100%; font-size:16px; margin-top:-2px;
-      ">🏫</div>
-    </div>`,
+  html: `<div style="
+      width:38px;height:38px;
+      background:linear-gradient(135deg,#8a7bff,#1fb6ff);
+      border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      border:3px solid #fff;box-shadow:0 4px 16px rgba(138,123,255,0.6);">
+    <div style="transform:rotate(45deg);display:flex;align-items:center;
+      justify-content:center;height:100%;font-size:16px;margin-top:-2px;">🏫</div>
+  </div>`,
   iconSize: [38, 38],
   iconAnchor: [19, 38],
   popupAnchor: [0, -40],
 });
 
-// ── Student pin (green / red) ──────────────────────────────────────────────
-function makeStudentIcon(isInside) {
-  const bg = isInside
-    ? "linear-gradient(135deg,#5be4a8,#00c6a0)"
-    : "linear-gradient(135deg,#ff6b81,#ff4757)";
-  const glow = isInside
-    ? "rgba(91,228,168,0.55)"
-    : "rgba(255,107,129,0.55)";
-  return new L.DivIcon({
-    className: "",
-    html: `
-      <div style="
-        width:34px; height:34px;
-        background:${bg};
-        border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);
-        border:3px solid #fff;
-        box-shadow:0 4px 16px ${glow};
-      ">
-        <div style="
-          transform:rotate(45deg);
-          display:flex; align-items:center; justify-content:center;
-          height:100%; font-size:14px; margin-top:-2px;
-        ">${isInside ? "✅" : "⚠️"}</div>
-      </div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 34],
-    popupAnchor: [0, -36],
-  });
-}
+// ── Student icons (two variants, module-level — never recreated) ───────────
+const STUDENT_ICON_OK = new L.DivIcon({
+  className: "",
+  html: `<div style="
+      width:34px;height:34px;
+      background:linear-gradient(135deg,#5be4a8,#00c6a0);
+      border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      border:3px solid #fff;box-shadow:0 4px 16px rgba(91,228,168,0.55);">
+    <div style="transform:rotate(45deg);display:flex;align-items:center;
+      justify-content:center;height:100%;font-size:14px;margin-top:-2px;">✅</div>
+  </div>`,
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -36],
+});
 
-// ── Auto-fit both markers ──────────────────────────────────────────────────
-function FitTwo({ teacherPos, studentPos }) {
-  const map = useMap();
-  useEffect(() => {
-    // Wait for the modal's DOM to fully paint before sizing
-    const timer = setTimeout(() => {
-      map.invalidateSize();           // recalculate container dimensions
-      const bounds = L.latLngBounds([teacherPos, studentPos]);
-      map.fitBounds(bounds, {
-        padding: [70, 70],
-        maxZoom: 16,                  // never so close that line disappears
-      });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [map, teacherPos, studentPos]);
-  return null;
-}
+const STUDENT_ICON_BAD = new L.DivIcon({
+  className: "",
+  html: `<div style="
+      width:34px;height:34px;
+      background:linear-gradient(135deg,#ff6b81,#ff4757);
+      border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      border:3px solid #fff;box-shadow:0 4px 16px rgba(255,107,129,0.55);">
+    <div style="transform:rotate(45deg);display:flex;align-items:center;
+      justify-content:center;height:100%;font-size:14px;margin-top:-2px;">⚠️</div>
+  </div>`,
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+  popupAnchor: [0, -36],
+});
 
-// ── Animated polyline pulse ────────────────────────────────────────────────
-function AnimatedLine({ positions, isInside }) {
-  const color = isInside ? "#5be4a8" : "#ff6b81";
-  return (
-    <>
-      {/* glow under-layer */}
-      <Polyline
-        positions={positions}
-        pathOptions={{ color, weight: 10, opacity: 0.15 }}
-      />
-      {/* solid line */}
-      <Polyline
-        positions={positions}
-        pathOptions={{ color, weight: 3, opacity: 0.9 }}
-      />
-      {/* dashed overlay */}
-      <Polyline
-        positions={positions}
-        pathOptions={{
-          color: "#fff",
-          weight: 1.5,
-          opacity: 0.5,
-          dashArray: "8, 10",
-        }}
-      />
-    </>
-  );
-}
-
-// ── Responsive map height ──────────────────────────────────────────────────
+// ── Responsive map height (pure function — derived once per open) ──────────
 function getMapHeight() {
   const w = window.innerWidth;
   if (w <= 480) return "260px";
@@ -127,34 +73,100 @@ function getMapHeight() {
   return "420px";
 }
 
-// ── Main Modal ─────────────────────────────────────────────────────────────
-const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
-  // ── ALL hooks must come before any early return ────────────────────────
-  // Close on Escape key
+// ── FitTwo — memoised so it never re-renders unless positions change ────────
+const FitTwo = memo(function FitTwo({ teacherPos, studentPos }) {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+      const bounds = L.latLngBounds([teacherPos, studentPos]);
+      map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [map, teacherPos, studentPos]);
+  return null;
+});
+
+// ── AnimatedLine — memoised so polylines don't repaint on unrelated renders ─
+const AnimatedLine = memo(function AnimatedLine({ positions, color }) {
+  return (
+    <>
+      <Polyline positions={positions} pathOptions={{ color, weight: 10, opacity: 0.15 }} />
+      <Polyline positions={positions} pathOptions={{ color, weight: 3,  opacity: 0.9  }} />
+      <Polyline positions={positions} pathOptions={{ color: "#fff", weight: 1.5, opacity: 0.5, dashArray: "8, 10" }} />
+    </>
+  );
+});
+
+// ── Stable pathOptions objects (avoid inline object recreation each render) ─
+const GEOFENCE_STYLE = {
+  color: "#8a7bff",
+  fillColor: "#8a7bff",
+  fillOpacity: 0.08,
+  weight: 2,
+  dashArray: "6 4",
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Main Modal
+// ═══════════════════════════════════════════════════════════════════════════
+const StudentMapModal = memo(function StudentMapModal({
+  student,
+  sessionLocation,
+  radius,
+  onClose,
+}) {
+  // ── All hooks MUST come before any early return ───────────────────────────
+
+  // Stable close handler — doesn't change unless onClose prop changes
+  const handleOverlayClick = useCallback(
+    (e) => { if (e.target === e.currentTarget) onClose(); },
+    [onClose]
+  );
+
+  // Derive computed values with useMemo so they only recalculate when inputs change
+  const derived = useMemo(() => {
+    if (!student || !sessionLocation) return null;
+    const [tLat, tLng] = sessionLocation.split(",").map(Number);
+    const [sLat, sLng] = student.Location.split(",").map(Number);
+    const dist = parseFloat(student.distance);
+    const rad  = parseFloat(radius);
+    const isInside = dist <= rad;
+    return {
+      teacherPos: [tLat, tLng],
+      studentPos: [sLat, sLng],
+      tLat, tLng, sLat, sLng,
+      dist, rad, isInside,
+      lineColor: isInside ? "#5be4a8" : "#ff6b81",
+      studentIcon: isInside ? STUDENT_ICON_OK : STUDENT_ICON_BAD,
+      avatarBorder: isInside ? "#5be4a8" : "#ff6b81",
+      badgeClass: isInside ? "smm-badge smm-badge--ok" : "smm-badge smm-badge--bad",
+      badgeLabel: isInside ? "✅ Verified" : "⚠️ Suspicious",
+    };
+  }, [student, sessionLocation, radius]);
+
+  // Map height — stable until window is resized (re-opens will recalculate)
+  const mapHeight = useMemo(() => getMapHeight(), []);
+
+  // Escape key listener
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Guard — after all hooks
-  if (!student || !sessionLocation) return null;
+  // ── Guard (after all hooks) ───────────────────────────────────────────────
+  if (!derived) return null;
 
-  const [tLat, tLng] = sessionLocation.split(",").map(Number);
-  const teacherPos = [tLat, tLng];
+  const {
+    teacherPos, studentPos,
+    tLat, tLng, sLat, sLng,
+    dist, rad, isInside,
+    lineColor, studentIcon, avatarBorder, badgeClass, badgeLabel,
+  } = derived;
 
-  const [sLat, sLng] = student.Location.split(",").map(Number);
-  const studentPos = [sLat, sLng];
-
-  const dist = parseFloat(student.distance);
-  const rad = parseFloat(radius);
-  const isInside = dist <= rad;
-  const mapHeight = getMapHeight();
-
-  // Close on overlay click
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
+  // Stable position arrays for markers/polylines
+  const linePositions = [teacherPos, studentPos];
 
   return (
     <div className="smm-overlay" onClick={handleOverlayClick}>
@@ -163,9 +175,9 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
         {/* ── Header ── */}
         <div className="smm-header">
           <div className="smm-header-left">
-            <div className="smm-avatar" style={{ borderColor: isInside ? "#5be4a8" : "#ff6b81" }}>
+            <div className="smm-avatar" style={{ borderColor: avatarBorder }}>
               {student.image
-                ? <img src={student.image} alt="student" />
+                ? <img src={student.image} alt="student" loading="lazy" />
                 : <span>{(student.regno || "?")[0]}</span>}
             </div>
             <div>
@@ -175,10 +187,8 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
           </div>
 
           <div className="smm-header-right">
-            <div className={`smm-badge ${isInside ? "smm-badge--ok" : "smm-badge--bad"}`}>
-              {isInside ? "✅ Verified" : "⚠️ Suspicious"}
-            </div>
-            <button className="smm-close-btn" onClick={onClose} title="Close">✕</button>
+            <div className={badgeClass}>{badgeLabel}</div>
+            <button className="smm-close-btn" onClick={onClose} title="Close (Esc)">✕</button>
           </div>
         </div>
 
@@ -186,7 +196,7 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
         <div className="smm-stats">
           <div className="smm-stat">
             <span className="smm-stat-label">Distance</span>
-            <span className="smm-stat-value" style={{ color: isInside ? "#5be4a8" : "#ff6b81" }}>
+            <span className="smm-stat-value" style={{ color: lineColor }}>
               {dist.toFixed(1)} m
             </span>
           </div>
@@ -210,7 +220,7 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
             center={teacherPos}
             zoom={17}
             style={{ height: mapHeight, width: "100%" }}
-            zoomControl={true}
+            zoomControl
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -219,27 +229,14 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
 
             <FitTwo teacherPos={teacherPos} studentPos={studentPos} />
 
-            {/* Geofence */}
-            <Circle
-              center={teacherPos}
-              radius={rad}
-              pathOptions={{
-                color: "#8a7bff",
-                fillColor: "#8a7bff",
-                fillOpacity: 0.08,
-                weight: 2,
-                dashArray: "6 4",
-              }}
-            />
+            {/* Geofence circle */}
+            <Circle center={teacherPos} radius={rad} pathOptions={GEOFENCE_STYLE} />
 
             {/* Connection line */}
-            <AnimatedLine
-              positions={[teacherPos, studentPos]}
-              isInside={isInside}
-            />
+            <AnimatedLine positions={linePositions} color={lineColor} />
 
             {/* Teacher marker */}
-            <Marker position={teacherPos} icon={teacherIcon}>
+            <Marker position={teacherPos} icon={TEACHER_ICON}>
               <Popup>
                 <div style={{ minWidth: 140 }}>
                   <strong style={{ color: "#333" }}>📍 Teacher / Classroom</strong>
@@ -251,7 +248,7 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
             </Marker>
 
             {/* Student marker */}
-            <Marker position={studentPos} icon={makeStudentIcon(isInside)}>
+            <Marker position={studentPos} icon={studentIcon}>
               <Popup>
                 <div style={{ minWidth: 160 }}>
                   <strong style={{ color: "#333" }}>{student.regno}</strong>
@@ -260,18 +257,12 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
                       {student.student_email}
                     </div>
                   )}
-                  <div
-                    style={{
-                      marginTop: 8,
-                      padding: "5px 8px",
-                      borderRadius: 6,
-                      background: isInside ? "#d4edda" : "#f8d7da",
-                      color: isInside ? "#155724" : "#721c24",
-                      fontWeight: "bold",
-                      fontSize: 13,
-                      textAlign: "center",
-                    }}
-                  >
+                  <div style={{
+                    marginTop: 8, padding: "5px 8px", borderRadius: 6,
+                    background: isInside ? "#d4edda" : "#f8d7da",
+                    color: isInside ? "#155724" : "#721c24",
+                    fontWeight: "bold", fontSize: 13, textAlign: "center",
+                  }}>
                     {isInside ? "Within bounds ✓" : "Out of bounds ✗"}
                   </div>
                   <div style={{ fontSize: 11, color: "#888", textAlign: "center", marginTop: 5 }}>
@@ -289,7 +280,7 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
               Teacher
             </div>
             <div className="smm-legend-item">
-              <span className="smm-legend-dot" style={{ background: isInside ? "#5be4a8" : "#ff6b81" }} />
+              <span className="smm-legend-dot" style={{ background: lineColor }} />
               Student
             </div>
             <div className="smm-legend-item">
@@ -302,6 +293,6 @@ const StudentMapModal = ({ student, sessionLocation, radius, onClose }) => {
       </div>
     </div>
   );
-};
+});
 
 export default StudentMapModal;

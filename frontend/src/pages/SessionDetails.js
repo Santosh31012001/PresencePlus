@@ -1,5 +1,5 @@
 //create a new session component
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import QRCode from "qrcode.react";
 import { io } from "socket.io-client";
@@ -61,21 +61,33 @@ const SessionDetails = (props) => {
 
   useEffect(() => {
     getQR();
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ← run ONCE on mount only — was missing dep array (infinite loop!)
 
-  const radius = parseFloat(props.currentSession[0].radius);
-  const suspiciousCount = attendanceList.filter(student => parseFloat(student.distance || 0) > radius).length;
+  const radius = useMemo(
+    () => parseFloat(props.currentSession[0].radius),
+    [props.currentSession]
+  );
 
-  const filteredStudents = attendanceList.filter(student => {
-    const matchesSearch = (student.regno || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (student.student_email || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const isSuspicious = parseFloat(student.distance) > radius;
-    
-    if (filterStatus === "VERIFIED" && isSuspicious) return false;
-    if (filterStatus === "SUSPICIOUS" && !isSuspicious) return false;
-    
-    return matchesSearch;
-  });
+  const suspiciousCount = useMemo(
+    () => attendanceList.filter(s => parseFloat(s.distance || 0) > radius).length,
+    [attendanceList, radius]
+  );
+
+  const filteredStudents = useMemo(() =>
+    attendanceList.filter(student => {
+      const matchesSearch =
+        (student.regno || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student.student_email || "").toLowerCase().includes(searchTerm.toLowerCase());
+      const isSuspicious = parseFloat(student.distance) > radius;
+      if (filterStatus === "VERIFIED" && isSuspicious) return false;
+      if (filterStatus === "SUSPICIOUS" && !isSuspicious) return false;
+      return matchesSearch;
+    }),
+    [attendanceList, searchTerm, filterStatus, radius]
+  );
+
+  const handleCloseModal = useCallback(() => setSelectedStudent(null), []);
 
   return (
     <div className="popup">
@@ -217,7 +229,7 @@ const SessionDetails = (props) => {
           student={selectedStudent}
           sessionLocation={props.currentSession[0].location}
           radius={radius}
-          onClose={() => setSelectedStudent(null)}
+          onClose={handleCloseModal}
         />
       )}
     </div>
