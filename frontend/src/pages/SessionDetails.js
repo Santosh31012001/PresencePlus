@@ -5,12 +5,14 @@ import QRCode from "qrcode.react";
 import { io } from "socket.io-client";
 import "../styles/SessionDetails.css";
 import MapView from "../components/MapView";
+import StudentMapModal from "../components/StudentMapModal";
 
 const SessionDetails = (props) => {
   const [qr, setQR] = useState("");
   const [attendanceList, setAttendanceList] = useState(props.currentSession[0].attendance);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
     const socket = io("http://localhost:5000");
@@ -173,6 +175,31 @@ const SessionDetails = (props) => {
                           </div>
                           <div style={{ fontSize: '12px', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.student_email}</div>
                           <div style={{ fontSize: '12px', marginTop: '4px', color: '#888' }}>Distance: <strong style={{ color: distProp.color }}>{distProp.distance}m</strong></div>
+                          {student.Location && (
+                            <button
+                              onClick={() => setSelectedStudent(student)}
+                              style={{
+                                marginTop: '8px',
+                                padding: '5px 10px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                borderRadius: '8px',
+                                background: 'linear-gradient(135deg,rgba(138,123,255,0.18),rgba(31,182,255,0.18))',
+                                border: '1px solid rgba(138,123,255,0.35)',
+                                color: '#b0a8ff',
+                                cursor: 'pointer',
+                                boxShadow: 'none',
+                                backgroundImage: 'none',
+                                transition: 'background 180ms ease, color 180ms ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title="View on individual map"
+                            >
+                              📍 View on Map
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -183,6 +210,16 @@ const SessionDetails = (props) => {
           </div>
         </div>
       </div>
+
+      {/* Per-student map modal */}
+      {selectedStudent && (
+        <StudentMapModal
+          student={selectedStudent}
+          sessionLocation={props.currentSession[0].location}
+          radius={radius}
+          onClose={() => setSelectedStudent(null)}
+        />
+      )}
     </div>
   );
 };

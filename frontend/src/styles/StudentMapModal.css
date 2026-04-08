@@ -1,0 +1,431 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   StudentMapModal — Responsive Styles
+   Breakpoints: 480px (xs) · 600px (sm) · 768px (md)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Overlay backdrop ─────────────────────────────────────────────────────── */
+.smm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(4, 7, 20, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: smmFadeIn 220ms ease forwards;
+}
+
+@keyframes smmFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Main panel ───────────────────────────────────────────────────────────── */
+.smm-panel {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: rgba(9, 13, 26, 0.97);
+  border-radius: 24px;
+  border: 1px solid rgba(138, 123, 255, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 40px 80px rgba(2, 6, 23, 0.7),
+    0 0 60px rgba(138, 123, 255, 0.12);
+  animation: smmSlideUp 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes smmSlideUp {
+  from { transform: translateY(24px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.smm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  flex-wrap: wrap;  /* wraps badge + close below name on very tight screens */
+}
+
+.smm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;       /* allow text truncation */
+}
+
+.smm-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;  /* push to the right even when header wraps */
+}
+
+/* ── Avatar ───────────────────────────────────────────────────────────────── */
+.smm-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  background: rgba(138, 123, 255, 0.15);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.smm-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Name / email ─────────────────────────────────────────────────────────── */
+.smm-name {
+  margin: 0 0 2px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 35ch;
+}
+
+.smm-email {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 35ch;
+}
+
+/* ── Status badge ─────────────────────────────────────────────────────────── */
+.smm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.smm-badge--ok {
+  background: rgba(91, 228, 168, 0.15);
+  border: 1px solid rgba(91, 228, 168, 0.35);
+  color: #5be4a8;
+}
+
+.smm-badge--bad {
+  background: rgba(255, 107, 129, 0.15);
+  border: 1px solid rgba(255, 107, 129, 0.35);
+  color: #ff6b81;
+}
+
+/* ── Close button ────────────────────────────────────────────────────────── */
+.smm-close-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+  box-shadow: none;
+  background-image: none;
+}
+
+.smm-close-btn:hover {
+  background: rgba(255, 107, 129, 0.18);
+  color: #ff6b81;
+  transform: rotate(90deg);
+  box-shadow: none;
+}
+
+/* ── Stats row ────────────────────────────────────────────────────────────── */
+.smm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);   /* 4-col on desktop */
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.smm-stat {
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.smm-stat:last-child {
+  border-right: none;
+}
+
+/* bottom border for top row when grid wraps to 2 cols */
+.smm-stat:nth-child(-n+2) {
+  border-bottom: none;
+}
+
+.smm-stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
+.smm-stat-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.smm-coord {
+  font-size: 0.75rem;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  color: var(--color-secondary);
+  font-weight: 500;
+  word-break: break-all;  /* coords don't overflow on small cells */
+}
+
+/* ── Map wrapper ──────────────────────────────────────────────────────────── */
+.smm-map-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Leaflet container height via JS inline style; just style the borders */
+.smm-map-wrap .leaflet-container {
+  border-radius: 0 0 24px 24px;
+}
+
+/* ── Legend ───────────────────────────────────────────────────────────────── */
+.smm-legend {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(9, 13, 26, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 9px 13px;
+}
+
+.smm-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.smm-legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.smm-legend-ring {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px dashed #8a7bff;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE BREAKPOINTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── md  ≤ 768px  (tablets / small laptops) ───────────────────────────────── */
+@media (max-width: 768px) {
+  .smm-overlay {
+    padding: 12px;
+    align-items: flex-end;   /* bottom-sheet behaviour */
+  }
+
+  .smm-panel {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 20px 20px 16px 16px;
+    animation: smmSlideBottom 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes smmSlideBottom {
+    from { transform: translateY(100%); opacity: 0.6; }
+    to   { transform: translateY(0);    opacity: 1;   }
+  }
+
+  .smm-header {
+    padding: 16px 18px 12px;
+  }
+
+  .smm-stats {
+    grid-template-columns: repeat(2, 1fr);  /* 2-col on tablet */
+  }
+
+  /* add divider below top row */
+  .smm-stat:nth-child(1),
+  .smm-stat:nth-child(2) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .smm-stat:nth-child(2) {
+    border-right: none;
+  }
+}
+
+/* ── sm  ≤ 600px  (large phones landscape) ───────────────────────────────── */
+@media (max-width: 600px) {
+  .smm-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+  }
+
+  .smm-name {
+    font-size: 0.95rem;
+    max-width: 22ch;
+  }
+
+  .smm-email {
+    font-size: 0.74rem;
+    max-width: 22ch;
+  }
+
+  /* Badge: show only emoji on very tight rows */
+  .smm-badge {
+    padding: 5px 10px;
+    font-size: 0.74rem;
+    gap: 3px;
+  }
+
+  .smm-stat {
+    padding: 10px 14px;
+  }
+
+  .smm-stat-value {
+    font-size: 0.85rem;
+  }
+
+  /* Legend switches to horizontal strip */
+  .smm-legend {
+    flex-direction: row;
+    flex-wrap: wrap;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    gap: 8px 16px;
+    justify-content: center;
+    padding: 8px 12px;
+  }
+}
+
+/* ── xs  ≤ 480px  (portrait phones) ─────────────────────────────────────── */
+@media (max-width: 480px) {
+  .smm-overlay {
+    padding: 0;
+  }
+
+  .smm-panel {
+    border-radius: 16px 16px 0 0;
+    max-height: 100vh;
+  }
+
+  .smm-header {
+    padding: 14px 14px 10px;
+    gap: 8px;
+  }
+
+  .smm-header-left {
+    gap: 10px;
+  }
+
+  .smm-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .smm-name {
+    font-size: 0.88rem;
+    max-width: 18ch;
+  }
+
+  .smm-email {
+    display: none;   /* email hidden on tiny screens to save space */
+  }
+
+  /* Only show emoji in badge on xs */
+  .smm-badge {
+    padding: 4px 8px;
+    font-size: 0;          /* hide text */
+    gap: 0;
+  }
+  .smm-badge::first-letter {
+    font-size: 1rem;       /* but show the leading emoji */
+  }
+
+  .smm-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .smm-stat {
+    padding: 8px 12px;
+  }
+
+  .smm-stat-label {
+    font-size: 0.62rem;
+  }
+
+  .smm-stat-value {
+    font-size: 0.8rem;
+  }
+
+  .smm-coord {
+    font-size: 0.66rem;
+  }
+
+  .smm-legend {
+    gap: 6px 12px;
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+}
