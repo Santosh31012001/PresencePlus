@@ -4,6 +4,7 @@ import "../styles/Dashboard.css";
 import { useNavigate } from "react-router-dom";
 import NewSession from "./NewSession";
 import SessionDetails from "./SessionDetails";
+import { Button } from "@chakra-ui/react";
 
 axios.defaults.withCredentials = true;
 
@@ -19,15 +20,22 @@ const TeacherDashboard = () => {
   //update list of sessions
   const updateList = async () => {
     try {
+      console.log("Fetching sessions with token:", token);
       const response = await axios.post(
         "http://localhost:5000/sessions/getSessions",
         {
           token: token,
         }
       );
-      setSessionList(response.data.sessions);
+      console.log("Sessions fetched - Full response:", response.data);
+      console.log("Sessions array:", response.data.sessions || []);
+      if (response.data.sessions && response.data.sessions.length > 0) {
+        console.log("First session structure:", response.data.sessions[0]);
+      }
+      setSessionList(response.data.sessions || []);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching sessions:", err.response?.data || err.message);
+      console.error("Full error:", err);
     }
   };
 
@@ -49,9 +57,8 @@ const TeacherDashboard = () => {
       navigate("/login");
     } else {
       updateList();
-      document.querySelector(".logout").style.display = "block";
     }
-  }, [token]);
+  }, [token, navigate]);
 
   const FlashCard = ({ session }) => {
     return (
@@ -73,9 +80,17 @@ const TeacherDashboard = () => {
           <h2>Your Sessions</h2>
         </div>
         <div className="createbtncol">
-          <button onClick={togglePopup} className="createbtn">
+          <Button
+            onClick={togglePopup}
+            bg="brand.500"
+            color="white"
+            fontWeight="bold"
+            px={6}
+            _hover={{ bg: "brand.600" }}
+            _active={{ bg: "brand.700" }}
+          >
             Create Session
-          </button>
+          </Button>
         </div>
       </div>
       <div className="session-list">
