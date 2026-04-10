@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import QRCode from "qrcode.react";
 import "../styles/NewSession.css";
+import { Button } from "@chakra-ui/react";
 
 const NewSession = ({ togglePopup }) => {
   //eslint-disable-next-line
@@ -84,9 +85,19 @@ const NewSession = ({ togglePopup }) => {
 
   return (
     <div className="new-popup">
-      <button onClick={togglePopup}>
-        <strong>X</strong>
-      </button>
+      <Button
+        position="absolute"
+        top={2}
+        right={2}
+        bg="danger.500"
+        color="white"
+        fontWeight="bold"
+        _hover={{ bg: "danger.600" }}
+        _active={{ bg: "danger.700" }}
+        onClick={togglePopup}
+      >
+        X
+      </Button>
       {!qrtoggle && (
         <div className="popup-inner">
           <h5>Create a New Session</h5>
@@ -115,14 +126,35 @@ const NewSession = ({ togglePopup }) => {
               <option value="50">50 meters</option>
               <option value="100">100 meters</option>
             </select>
-            <button type="submit">Create Session</button>
+            <Button
+              type="submit"
+              width="100%"
+              bg="brand.500"
+              color="white"
+              fontWeight="bold"
+              _hover={{ bg: "brand.600" }}
+              _active={{ bg: "brand.700" }}
+            >
+              Create Session
+            </Button>
           </form>
         </div>
       )}
       {qrtoggle && (
         <div className="qr-code">
           <QRCode value={qrData} onClick={copyQR} size={200} />
-          <button onClick={copyQR}>Copy</button>
+          <Button
+            onClick={copyQR}
+            mt={2}
+            width="100%"
+            bg="brand.500"
+            color="white"
+            fontWeight="bold"
+            _hover={{ bg: "brand.600" }}
+            _active={{ bg: "brand.700" }}
+          >
+            Copy
+          </Button>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import axios from "axios";
 import "../styles/StudentDashboard.css";
 import { useNavigate } from "react-router-dom";
 import StudentForm from "./StudentForm";
+import { Table, Box } from "@chakra-ui/react";
 const queryParameters = new URLSearchParams(window.location.search);
 
 const Dashboard = () => {
@@ -11,18 +12,29 @@ const Dashboard = () => {
   // eslint-disable-next-line
   const [sessionList, setSessionList] = useState([]);
   const [isSessionDisplay, setSessionDisplay] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   function getStudentSessions() {
+    setLoading(true);
+    setError(null);
+    console.log("Fetching sessions with token:", token);
+    
     axios
       .post("http://localhost:5000/sessions/getStudentSessions", {
         token: token,
       })
       .then((response) => {
-        setSessionList(response.data.sessions);
+        console.log("Sessions fetched:", response.data);
+        setSessionList(response.data.sessions || []);
+        setLoading(false);
       })
       .catch((error) => {
-        console.log(error);
+        console.error("Error fetching sessions:", error.response?.data || error.message);
+        setError(error.response?.data?.message || "Failed to load sessions");
+        setSessionList([]);
+        setLoading(false);
       });
   }
 
@@ -49,7 +61,6 @@ const Dashboard = () => {
       navigate("/login");
     } else {
       getStudentSessions();
-      document.querySelector(".logout").style.display = "block";
       try {
         if (
           queryParameters.get("session_id") !== null &&
@@ -67,62 +78,66 @@ const Dashboard = () => {
           toggleStudentForm("open");
         }
       } catch (err) {
-        console.log(err);
+        console.error("Error in form setup:", err);
       }
     }
-  }, [token]);
+  }, [token, navigate]);
 
   return (
     <div className="dashboard-main student-dashboard">
       {!isSessionDisplay && (
         <div className="session-list">
           <h2>Your Sessions</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Duration</th>
-                <th>Distance</th>
-                <th>Image</th>
-              </tr>
-            </thead>
-            {sessionList.length > 0 ? (
-              sessionList.map((session, index) => {
-                return (
-                  <tbody key={index}>
-                    <tr key={index + "0"} className="session">
-                      <th key={index + "2"}>{session.name}</th>
-                      <th key={index + "3"}>{session.date.split("T")[0]}</th>
-                      <th key={index + "4"}>{session.time}</th>
-                      <th key={index + "5"}>{session.duration}</th>
-                      <th
-                        key={index + "6"}
-                        className="distance"
-                        style={{
-                          color: getDistance(session.distance, session.radius)
-                            .color,
-                        }}
+          {error && (
+            <Box bg="danger.500" color="white" p={4} mb={4} borderRadius="md">
+              {error}
+            </Box>
+          )}
+          {loading && (
+            <Box textAlign="center" py={8}>
+              <p>Loading sessions...</p>
+            </Box>
+          )}
+          {!loading && !error && sessionList.length === 0 && (
+            <Box textAlign="center" py={8} color="gray.500">
+              <p>No sessions found</p>
+            </Box>
+          )}
+          {!loading && sessionList.length > 0 && (
+            <Table.Root>
+              <Table.Header bg="brand.500">
+                <Table.Row>
+                  <Table.ColumnHeader color="white" fontWeight="bold">Name</Table.ColumnHeader>
+                  <Table.ColumnHeader color="white" fontWeight="bold">Date</Table.ColumnHeader>
+                  <Table.ColumnHeader color="white" fontWeight="bold">Time</Table.ColumnHeader>
+                  <Table.ColumnHeader color="white" fontWeight="bold">Duration</Table.ColumnHeader>
+                  <Table.ColumnHeader color="white" fontWeight="bold">Distance</Table.ColumnHeader>
+                  <Table.ColumnHeader color="white" fontWeight="bold">Image</Table.ColumnHeader>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {sessionList.map((session, index) => {
+                  return (
+                    <Table.Row key={index} className="session">
+                      <Table.Cell>{session.name}</Table.Cell>
+                      <Table.Cell>{session.date.split("T")[0]}</Table.Cell>
+                      <Table.Cell>{session.time}</Table.Cell>
+                      <Table.Cell>{session.duration}</Table.Cell>
+                      <Table.Cell
+                        color={getDistance(session.distance, session.radius).color}
+                        fontWeight="bold"
                       >
                         {getDistance(session.distance, session.radius).distance}
-                      </th>
-                      <th key={index + "7"}>
+                      </Table.Cell>
+                      <Table.Cell>
                         <img src={session.image} alt="session" width={200} />
-                      </th>
-                    </tr>
-                  </tbody>
-                );
-              })
-            ) : (
-              <tbody>
-                <tr>
-                  <td>No sessions found</td>
-                </tr>
-              </tbody>
-            )}
-            <tfoot></tfoot>
-          </table>
+                      </Table.Cell>
+                    </Table.Row>
+                  );
+                })}
+              </Table.Body>
+            </Table.Root>
+          )}
         </div>
       )}
       {isSessionDisplay && (

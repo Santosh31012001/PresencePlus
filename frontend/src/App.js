@@ -6,7 +6,6 @@ import {
   Login,
   Logout,
   Register,
-  Nav,
   NewSession,
   StudentDashboard,
   ForgotPassword,
@@ -58,12 +57,7 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return (
-    <div>
-      <Nav />
-      <RouterProvider router={router} />
-    </div>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
