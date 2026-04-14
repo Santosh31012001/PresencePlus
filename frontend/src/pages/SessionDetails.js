@@ -498,7 +498,25 @@ const SessionDetails = (props) => {
               </div>
             ) : (
               filteredStudents.map((student, i) => {
+                // ─────────────────────────────────────────────────────────────
+                // PHASE 5: Use new validation status if available
+                // ─────────────────────────────────────────────────────────────
+                const validationStatus = student.status || "SUSPICIOUS"; // NEW
+                const consistencyScore = student.gps_consistency_score || 0; // NEW
+                const bluetoothDetected = student.bluetooth_detected || false; // NEW
+                
+                // Status emoji and color mapping
+                const statusConfig = {
+                  VERIFIED: { emoji: "✅", color: "#10b981", label: "Verified" },
+                  SUSPICIOUS: { emoji: "⚠️", color: "#f59e0b", label: "Suspicious" },
+                  OUTSIDE_GEOFENCE: { emoji: "❌", color: "#ef4444", label: "Out of Range" },
+                };
+                const config = statusConfig[validationStatus] || statusConfig["SUSPICIOUS"];
+                // ─────────────────────────────────────────────────────────────
+
+                // Fallback to distance-based check for backward compatibility
                 const isOk = parseFloat(student.distance) <= radius;
+                
                 return (
                   <div
                     key={i}
@@ -511,10 +529,56 @@ const SessionDetails = (props) => {
                     <div className="student-left">
                       <span className="student-regno">{student.regno}</span>
                       <span className="student-email">{student.student_email}</span>
+                      
+                      {/* ─────────────────────────────────────────────────────── */}
+                      {/* PHASE 5: Show consistency score + Bluetooth status */}
+                      {/* ─────────────────────────────────────────────────────── */}
+                      <div style={{
+                        display: "flex",
+                        gap: 8,
+                        marginTop: 4,
+                        fontSize: 11,
+                        color: "#6b7280",
+                      }}>
+                        {consistencyScore > 0 && (
+                          <span title="GPS Accuracy Score">
+                            📍 {(consistencyScore * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        {bluetoothDetected && (
+                          <span title="Bluetooth Detected" style={{ color: "#3b82f6" }}>
+                            📡 BT
+                          </span>
+                        )}
+                      </div>
+                      {/* ──────────────────────────────────────────────────────── */}
                     </div>
+                    
                     <div className="student-right">
-                      <span className={`student-badge ${isOk ? 'verified' : 'suspicious'}`}>{isOk ? "✓ OK" : "⚠ OUT"}</span>
-                      <span className={`distance-chip ${isOk ? 'verified' : 'suspicious'}`}>{student.distance}m</span>
+                      {/* ─────────────────────────────────────────────────────── */}
+                      {/* PHASE 5: New validation status badge */}
+                      {/* ─────────────────────────────────────────────────────── */}
+                      <span
+                        className="student-badge"
+                        style={{
+                          background: `${config.color}20`,
+                          color: config.color,
+                          border: `1px solid ${config.color}40`,
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          whiteSpace: "nowrap",
+                        }}
+                        title={`Status: ${config.label}`}
+                      >
+                        {config.emoji} {config.label}
+                      </span>
+                      {/* ──────────────────────────────────────────────────────── */}
+                      
+                      <span className={`distance-chip ${isOk ? 'verified' : 'suspicious'}`}>
+                        {student.distance}m
+                      </span>
                     </div>
                   </div>
                 );

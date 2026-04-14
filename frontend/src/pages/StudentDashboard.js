@@ -32,6 +32,12 @@ const Dashboard = () => {
       })
       .catch((error) => {
         console.error("Error fetching sessions:", error.response?.data || error.message);
+        // If token is expired/invalid, clear it and redirect to login
+        if (error.response?.status === 401) {
+          localStorage.removeItem("token");
+          navigate("/login");
+          return;
+        }
         setError(error.response?.data?.message || "Failed to load sessions");
         setSessionList([]);
         setLoading(false);
