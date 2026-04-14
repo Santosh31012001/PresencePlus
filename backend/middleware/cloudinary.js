@@ -12,7 +12,7 @@ cloudinary.config({
 
 async function uploadImage(imageName) {
   let imagePath = path.join(`./public/uploads/${imageName}`);
-  const result = await cloudinary.uploader.upload(imagePath);
+  const result = await cloudinary.uploader.upload(imagePath, { timeout: 15000 });
   await new Promise((resolve) => setTimeout(resolve, 2000));
   fs.unlink(`./public/uploads/${imageName}`, (err) => {
     if (err) {
