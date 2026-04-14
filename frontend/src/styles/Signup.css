@@ -147,6 +147,12 @@
 
 .pass-input-div {
   position: relative;
+  width: 100%;
+}
+
+.pass-input-div input {
+  width: 100%;
+  padding-right: 48px; /* leave room for the eye icon */
 }
 
 .pass-input-div button {
@@ -157,12 +163,14 @@
   border: none;
   background: transparent;
   padding: 0;
+  width: auto;          /* override the global 'width: 100%' on buttons */
   box-shadow: none;
   cursor: pointer;
 }
 
 .pass-input-div button img {
   width: 22px;
+  display: block;
 }
 
 .first-slide,

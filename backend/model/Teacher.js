@@ -3,11 +3,10 @@ const schema = mongoose.Schema;
 
 const userSchema = new schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    pno: { type: String, required: true },
-    dob: { type: String, required: true },
-    password: { type: String, required: true }, // Password save as hash
+    name:     { type: String, required: true },
+    email:    { type: String, required: true },
+    pno:      { type: String },
+    password: { type: String, required: true }, // Password saved as hash
     sessions: [
       {
         session_id: { type: String, required: true },

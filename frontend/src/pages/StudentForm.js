@@ -145,47 +145,54 @@ const StudentForm = ({ togglePopup }) => {
       setGpsReadings([]);
       setGpsProgress(0);
 
-      const captureInterval = setInterval(() => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            const reading = {
-              latitude: parseFloat(latitude.toFixed(6)),
-              longitude: parseFloat(longitude.toFixed(6)),
-              timestamp: new Date().toISOString(),
-            };
+      // Use watchPosition — fires immediately on every GPS fix (no waiting for a timer)
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const reading = {
+            latitude: parseFloat(latitude.toFixed(6)),
+            longitude: parseFloat(longitude.toFixed(6)),
+            accuracy: position.coords.accuracy, // track accuracy too
+            timestamp: new Date().toISOString(),
+          };
 
-            gpsReadingsRef.current.push(reading);
-            setGpsReadings([...gpsReadingsRef.current]);
-            setGpsProgress(gpsReadingsRef.current.length);
+          gpsReadingsRef.current.push(reading);
+          setGpsReadings([...gpsReadingsRef.current]);
+          setGpsProgress(gpsReadingsRef.current.length);
 
-            console.log(
-              `📍 GPS Reading ${gpsReadingsRef.current.length}: ${latitude}, ${longitude}`
-            );
+          console.log(
+            `📍 GPS Reading ${gpsReadingsRef.current.length}: ${latitude}, ${longitude} (±${position.coords.accuracy.toFixed(1)}m)`
+          );
 
-            // Stop after 5 readings (captured at 0s, 45s, 90s, 135s, 180s)
-            if (gpsReadingsRef.current.length >= 5) {
-              clearInterval(captureInterval);
-              setIsCapturingGPS(false);
-              console.log("✅ GPS capture complete!");
-              resolve(gpsReadingsRef.current);
-            }
-          },
-          (error) => {
-            console.error("GPS Error:", error);
-            reject(`Error getting geolocation: ${error.message}`);
+          // Stop after 5 readings
+          if (gpsReadingsRef.current.length >= 5) {
+            navigator.geolocation.clearWatch(watchId);
+            setIsCapturingGPS(false);
+            console.log("✅ GPS capture complete!");
+            resolve(gpsReadingsRef.current);
           }
-        );
-      }, 45000); // Capture every 45 seconds (5 readings in ~3.75 minutes)
+        },
+        (error) => {
+          navigator.geolocation.clearWatch(watchId);
+          setIsCapturingGPS(false);
+          console.error("GPS Error:", error);
+          reject(`Error getting geolocation: ${error.message}`);
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      );
 
-      // Fallback: Stop after 4 minutes if something goes wrong
+      // Fallback: resolve with whatever we have after 15 seconds
       setTimeout(() => {
-        clearInterval(captureInterval);
+        navigator.geolocation.clearWatch(watchId);
         if (gpsReadingsRef.current.length > 0) {
           setIsCapturingGPS(false);
+          console.warn(`⚠️ GPS timeout — using ${gpsReadingsRef.current.length} readings`);
           resolve(gpsReadingsRef.current);
+        } else {
+          setIsCapturingGPS(false);
+          reject("GPS timeout: no readings received");
         }
-      }, 240000); // 4 minutes
+      }, 15000); // 15 second hard cap
     });
   };
   // ─────────────────────────────────────────────────────────────
@@ -399,7 +406,7 @@ const StudentForm = ({ togglePopup }) => {
               ))}
             </div>
             <p style={{ margin: 0, fontSize: 12, color: "#6b7280 " }}>
-              Reading {gpsProgress} of 5 (takes ~3-4 minutes)
+              Reading {gpsProgress} of 5 (usually done in a few seconds)
             </p>
           </div>
         )}

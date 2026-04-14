@@ -5,8 +5,11 @@ const userSchema = new schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true },
-    pno: { type: String, required: true },
-    dob: { type: String, required: true },
+    pno: { type: String },
+    regno: { type: String, required: true }, // Roll number
+    branch: { type: String, required: true }, // e.g. "CSE", "ECE"
+    year: { type: String, required: true }, // e.g. "2nd Year"
+    section: { type: String }, // e.g. "A", "B"
     password: { type: String, required: true },
     sessions: [
       {

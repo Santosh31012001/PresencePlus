@@ -39,13 +39,22 @@ async function Signup(req, res) {
   try {
     console.log('Signup request body:', req.body);  // Debug log
 
-    const { name, email, pno, dob, password, type } = req.body;
+    const { name, email, pno, password, type, regno, branch, year, section } = req.body;
 
     // Validate required fields
-    if (!name || !email || !pno || !dob || !password || !type) {
+    if (!name || !email || !password || !type) {
       return res.status(400).json({
         message: "Missing required fields",
-        required: ['name', 'email', 'pno', 'dob', 'password', 'type'],
+        required: ['name', 'email', 'password', 'type'],
+        received: Object.keys(req.body)
+      });
+    }
+
+    // Extra validation for students
+    if (type === 'student' && (!regno || !branch || !year || !section)) {
+      return res.status(400).json({
+        message: "Missing student fields",
+        required: ['regno', 'branch', 'year', 'section'],
         received: Object.keys(req.body)
       });
     }
@@ -60,11 +69,14 @@ async function Signup(req, res) {
 
     if (type === "student") {
       const user = new Student({
-        name: name,
-        email: email,
-        pno: pno,
-        dob: dob,
-        password: password,
+        name,
+        email,
+        pno,
+        password,
+        regno,
+        branch,
+        year,
+        section,
       });
 
       const existingUser = await Student.findOne({ email: email }).exec();
@@ -78,11 +90,10 @@ async function Signup(req, res) {
 
     } else {
       const user = new Teacher({
-        name: name,
-        email: email,
-        pno: pno,
-        dob: dob,
-        password: password,
+        name,
+        email,
+        pno,
+        password,
       });
 
       const existingUser = await Teacher.findOne({ email: email }).exec();
