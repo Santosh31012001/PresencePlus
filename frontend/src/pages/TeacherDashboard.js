@@ -35,6 +35,12 @@ const TeacherDashboard = () => {
       setSessionList(response.data.sessions || []);
     } catch (err) {
       console.error("Error fetching sessions:", err.response?.data || err.message);
+      // If token is expired/invalid, clear it and redirect to login
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
       console.error("Full error:", err);
     }
   };
