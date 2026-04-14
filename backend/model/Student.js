@@ -3,14 +3,15 @@ const schema = mongoose.Schema;
 
 const userSchema = new schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    pno: { type: String },
-    regno: { type: String, required: true }, // Roll number
-    branch: { type: String, required: true }, // e.g. "CSE", "ECE"
-    year: { type: String, required: true }, // e.g. "2nd Year"
-    section: { type: String }, // e.g. "A", "B"
+    name:     { type: String, required: true },
+    email:    { type: String, required: true },
+    pno:      { type: String },
+    regno:    { type: String, required: true },
+    branch:   { type: String, required: true },
+    year:     { type: String, required: true },
+    section:  { type: String },
     password: { type: String, required: true },
+    profile_photo: { type: String, default: null }, // Face photo URL from signup
     sessions: [
       {
         session_id: { type: String, required: true },

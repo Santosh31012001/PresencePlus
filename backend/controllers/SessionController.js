@@ -165,8 +165,7 @@ async function AttendSession(req, res) {
     student_email, 
     Location,  // Legacy: single point
     date,
-    gps_readings,  // NEW: Array of GPS readings [{latitude, longitude, timestamp}, ...]
-    bluetooth_detected,  // NEW: Boolean flag
+    gps_readings,  // Array of GPS readings [{latitude, longitude, timestamp}, ...]
   } = req.body;
 
   // ─────────────────────────────────────────────────────────────
@@ -179,7 +178,6 @@ async function AttendSession(req, res) {
   console.log("student_email:", student_email);
   console.log("gps_readings type:", typeof gps_readings);
   console.log("gps_readings:", gps_readings);
-  console.log("bluetooth_detected:", bluetooth_detected);
   console.log("file uploaded:", !!req.file);
   console.log("=============================");
 
@@ -210,9 +208,6 @@ async function AttendSession(req, res) {
     gpsReadingsArray = [];
   }
   // ─────────────────────────────────────────────────────────────
-
-  // Convert string boolean to actual boolean
-  const btDetected = bluetooth_detected === "true" || bluetooth_detected === true;
 
   let imageName = req.file.filename;
   console.log(imageName);
@@ -249,23 +244,18 @@ async function AttendSession(req, res) {
       // ─────────────────────────────────────────────────────────────
 
       // ─────────────────────────────────────────────────────────────
-      // PHASE 1: Process GPS + Bluetooth data
+      // GPS validation
       // ─────────────────────────────────────────────────────────────
-      
-      let attendance_status = "SUSPICIOUS";  // Default status
+
+      let attendance_status = "SUSPICIOUS";  // Default
       let medianLocation = null;
       let consistencyScore = 0;
       let finalDistance = "0";
-      
-      // If new format (GPS array) is provided, use it
-      if (gpsReadingsArray && Array.isArray(gpsReadingsArray) && gpsReadingsArray.length >= 5) {
-        // Calculate median position from multiple GPS readings
+
+      if (gpsReadingsArray && Array.isArray(gpsReadingsArray) && gpsReadingsArray.length >= 1) {
         medianLocation = calculateMedianGPS(gpsReadingsArray);
-        
-        // Calculate consistency score
         consistencyScore = calculateGPSConsistency(gpsReadingsArray, medianLocation);
-        
-        // Calculate distance from teacher using median location
+
         const teacherLocation = session.location; // "lat,lng"
         finalDistance = haversineDistance(
           medianLocation.latitude,
@@ -273,30 +263,27 @@ async function AttendSession(req, res) {
           parseFloat(teacherLocation.split(",")[0]),
           parseFloat(teacherLocation.split(",")[1])
         ).toFixed(2);
-        
-        // Determine status based on hybrid validation
+
         const isWithinGeofence = parseFloat(finalDistance) <= parseFloat(session.radius);
-        const isBTDetected = btDetected === true;
         const isHighConsistency = consistencyScore >= 0.7;
-        
-        if (isWithinGeofence && isBTDetected && isHighConsistency) {
+
+        if (isWithinGeofence && isHighConsistency) {
           attendance_status = "VERIFIED";
-        } else if (isWithinGeofence && !isBTDetected) {
-          attendance_status = "SUSPICIOUS";  // GPS valid but no BT = possible spoofing
-        } else if (!isWithinGeofence) {
+        } else if (isWithinGeofence && !isHighConsistency) {
+          attendance_status = "SUSPICIOUS";  // GPS in range but low consistency
+        } else {
           attendance_status = "OUTSIDE_GEOFENCE";
         }
-        
-        console.log(`✓ PHASE 1 VALIDATION:
-          GPS Readings: ${gpsReadingsArray.length}
+
+        console.log(`✓ GPS VALIDATION:
+          Readings: ${gpsReadingsArray.length}
           Median: ${medianLocation.latitude}, ${medianLocation.longitude}
           Consistency: ${consistencyScore}
           Distance: ${finalDistance}m (radius: ${session.radius}m)
-          Bluetooth: ${isBTDetected}
           Status: ${attendance_status}
         `);
       } else {
-        // Fallback: Use legacy single location if GPS array not provided
+        // Fallback: legacy single location
         finalDistance = checkStudentDistance(Location, session.location);
         console.log("⚠ Using legacy single-point GPS");
       }
@@ -315,9 +302,8 @@ async function AttendSession(req, res) {
         distance: finalDistance,
         radius: session.radius,
         image: imageUrl,
-        status: attendance_status,  // NEW
-        bluetooth_detected: btDetected,  // NEW: Use parsed boolean
-        gps_consistency_score: consistencyScore,  // NEW
+        status: attendance_status,
+        gps_consistency_score: consistencyScore,
       };
 
       session.attendance.push({
@@ -326,15 +312,10 @@ async function AttendSession(req, res) {
         date,
         IP,
         student_email: tokenData.email,
-        
-        // New fields for Phase 1
         status: attendance_status,
-        gps_readings: gpsReadingsArray || [],  // NEW: Use parsed array
+        gps_readings: gpsReadingsArray || [],
         median_location: medianLocation || {},
-        bluetooth_detected: btDetected,  // NEW: Use parsed boolean
         gps_consistency_score: consistencyScore,
-        
-        // Legacy fields
         Location,
         distance: finalDistance,
       });
@@ -373,10 +354,9 @@ async function AttendSession(req, res) {
           date,
           IP,
           student_email: tokenData.email,
-          status: attendance_status,  // NEW: Use actual status
-          bluetooth_detected: btDetected,  // NEW: Use parsed boolean
-          gps_consistency_score: consistencyScore,  // NEW
-          distance: finalDistance,  // NEW
+          status: attendance_status,
+          gps_consistency_score: consistencyScore,
+          distance: finalDistance,
         },
       });
 

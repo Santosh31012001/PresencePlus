@@ -14,6 +14,7 @@
     "buffer": "^6.0.3",
     "buffers": "^0.1.1",
     "crypto-js": "^4.2.0",
+    "face-api.js": "^0.22.2",
     "framer-motion": "^12.38.0",
     "leaflet": "^1.9.4",
     "qrcode.react": "^3.1.0",

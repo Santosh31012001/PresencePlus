@@ -1,6 +1,7 @@
-//create a new session component
+// Student attendance form with face verification
 import React, { useState, useRef } from "react";
 import axios from "axios";
+import * as faceapi from "face-api.js";
 import "../styles/StudentForm.css";
 
 const StudentForm = ({ togglePopup }) => {
@@ -11,12 +12,22 @@ const StudentForm = ({ togglePopup }) => {
   const videoRef = useRef(null);
 
   // ─────────────────────────────────────────────────────────────
-  // PHASE 3: State for GPS capture progress
+  // GPS capture state
   // ─────────────────────────────────────────────────────────────
   const [isCapturingGPS, setIsCapturingGPS] = useState(false);
-  const [gpsReadings, setGpsReadings] = useState([]);
-  const [gpsProgress, setGpsProgress] = useState(0); // 0-5 for number of readings
-  const gpsReadingsRef = useRef([]); // Use ref to avoid stale closures in interval
+  const [gpsProgress, setGpsProgress] = useState(0);
+  const gpsReadingsRef = useRef([]);
+  // ─────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────
+  // FACE VERIFICATION: State
+  // ─────────────────────────────────────────────────────────────
+  const [faceStatus, setFaceStatus] = useState(null);
+  const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
+
+  // Result screen — replaces innerHTML anti-pattern
+  const [result, setResult] = useState(null);
+  // result shape: { type: 'success'|'error'|'expired'|'faceMismatch', message, status, consistency_score, errorMsg }
   // ─────────────────────────────────────────────────────────────
 
   const constraints = {
@@ -60,79 +71,10 @@ const StudentForm = ({ togglePopup }) => {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // PHASE 4: Bluetooth detection using Web Bluetooth API
+  // GPS: Collect up to 5 readings via watchPosition.
+  // Resolves early once 5 readings are obtained, or after 10s
+  // with however many readings were collected (minimum 1).
   // ─────────────────────────────────────────────────────────────
-  const [isCheckingBT, setIsCheckingBT] = useState(false);
-  const [btStatus, setBtStatus] = useState(null); // null | true | false
-  const [btError, setBtError] = useState(null);
-
-  const checkBluetoothPresence = async () => {
-    // Only attempt once per session to avoid permission overload
-    if (btStatus !== null) {
-      console.log("📡 BT already checked, skipping...");
-      return btStatus;
-    }
-
-    setIsCheckingBT(true);
-    setBtError(null);
-
-    try {
-      // Check if browser supports Web Bluetooth API
-      if (!navigator.bluetooth) {
-        console.warn(
-          "⚠️ Web Bluetooth API not supported. Using mock BT detection."
-        );
-        // For browsers/devices without BT support, we'll use fallback
-        setBtStatus(false);
-        setIsCheckingBT(false);
-        return false;
-      }
-
-      console.log("📡 Scanning for Bluetooth devices...");
-
-      // Request Bluetooth device - this will show browser's BT picker
-      // We're looking for ANY device to confirm BT radio is on
-      const device = await navigator.bluetooth.requestDevice({
-        // Look for generic services available on most devices
-        optionalServices: [
-          "generic_access", // Standard UUID for generic Bluetooth device
-          "health_thermometer", // Common service
-          "heart_rate", // Common service
-        ],
-        acceptAllDevices: true, // Accept any device to just verify BT presence
-      });
-
-      console.log("✅ Bluetooth device found:", device.name || "Unknown");
-      setBtStatus(true);
-      setIsCheckingBT(false);
-      return true;
-    } catch (error) {
-      if (error.name === "NotFoundError") {
-        // User couldn't find Bluetooth device or canceled
-        console.log("⚠️ No Bluetooth devices found or user cancelled");
-        setBtStatus(false);
-      } else if (error.name === "NotSupportedError") {
-        console.warn("⚠️ Bluetooth not supported on this device");
-        setBtStatus(false);
-      } else if (error.name === "SecurityError") {
-        console.warn(
-          "⚠️ Bluetooth requires HTTPS or localhost"
-        );
-        setBtStatus(false);
-        setBtError(
-          "Bluetooth requires HTTPS connection for security reasons"
-        );
-      } else {
-        console.error("Bluetooth error:", error);
-        setBtStatus(false);
-        setBtError(error.message);
-      }
-      setIsCheckingBT(false);
-      return false;
-    }
-  };
-  // ─────────────────────────────────────────────────────────────
-
   const captureGPSReadings = () => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -142,22 +84,23 @@ const StudentForm = ({ togglePopup }) => {
 
       setIsCapturingGPS(true);
       gpsReadingsRef.current = [];
-      setGpsReadings([]);
       setGpsProgress(0);
 
-      // Use watchPosition — fires immediately on every GPS fix (no waiting for a timer)
+      let resolved = false;
+
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
+          if (resolved) return;
+
           const { latitude, longitude } = position.coords;
           const reading = {
             latitude: parseFloat(latitude.toFixed(6)),
             longitude: parseFloat(longitude.toFixed(6)),
-            accuracy: position.coords.accuracy, // track accuracy too
+            accuracy: position.coords.accuracy,
             timestamp: new Date().toISOString(),
           };
 
           gpsReadingsRef.current.push(reading);
-          setGpsReadings([...gpsReadingsRef.current]);
           setGpsProgress(gpsReadingsRef.current.length);
 
           console.log(
@@ -166,13 +109,16 @@ const StudentForm = ({ togglePopup }) => {
 
           // Stop after 5 readings
           if (gpsReadingsRef.current.length >= 5) {
+            resolved = true;
             navigator.geolocation.clearWatch(watchId);
             setIsCapturingGPS(false);
-            console.log("✅ GPS capture complete!");
-            resolve(gpsReadingsRef.current);
+            console.log("✅ GPS capture complete (5 readings)!");
+            resolve([...gpsReadingsRef.current]);
           }
         },
         (error) => {
+          if (resolved) return;
+          resolved = true;
           navigator.geolocation.clearWatch(watchId);
           setIsCapturingGPS(false);
           console.error("GPS Error:", error);
@@ -181,19 +127,109 @@ const StudentForm = ({ togglePopup }) => {
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
 
-      // Fallback: resolve with whatever we have after 15 seconds
+      // 10-second hard cap — resolve with whatever we have (≥1 reading)
       setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
         navigator.geolocation.clearWatch(watchId);
+        setIsCapturingGPS(false);
+
         if (gpsReadingsRef.current.length > 0) {
-          setIsCapturingGPS(false);
-          console.warn(`⚠️ GPS timeout — using ${gpsReadingsRef.current.length} readings`);
-          resolve(gpsReadingsRef.current);
+          console.warn(
+            `⚠️ GPS timeout — using ${gpsReadingsRef.current.length} reading(s)`
+          );
+          resolve([...gpsReadingsRef.current]);
         } else {
-          setIsCapturingGPS(false);
           reject("GPS timeout: no readings received");
         }
-      }, 15000); // 15 second hard cap
+      }, 10000);
     });
+  };
+  // ─────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────
+  // FACE VERIFICATION: Load models & compare live photo vs registered profile
+  // ─────────────────────────────────────────────────────────────
+  const verifyFace = async (livePhotoDataUrl) => {
+    setFaceStatus("verifying");
+    try {
+      // Load models only once
+      if (!faceModelsLoaded) {
+        console.log("🧠 Loading face-api.js models...");
+        const MODEL_URL = "/models";
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        setFaceModelsLoaded(true);
+        console.log("✅ Face models loaded");
+      }
+
+      // Fetch the stored profile photo URL from backend
+      const profileRes = await axios.get("http://localhost:5000/users/profile_photo", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const profilePhotoUrl = profileRes.data.profile_photo;
+
+      if (!profilePhotoUrl) {
+        console.warn("⚠️ No profile photo found — skipping face check");
+        setFaceStatus("passed"); // Graceful fallback if photo not set at signup
+        return true;
+      }
+
+      // Load both images as HTML Image elements
+      const loadImage = (src) =>
+        new Promise((res, rej) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload  = () => res(img);
+          img.onerror = () => rej(new Error("Failed to load image: " + src));
+          img.src = src;
+        });
+
+      console.log("📸 Computing face descriptors...");
+      const opts = new faceapi.TinyFaceDetectorOptions();
+
+      const [liveImg, profileImg] = await Promise.all([
+        loadImage(livePhotoDataUrl),
+        loadImage(profilePhotoUrl),
+      ]);
+
+      const [liveResult, profileResult] = await Promise.all([
+        faceapi.detectSingleFace(liveImg, opts).withFaceLandmarks(true).withFaceDescriptor(),
+        faceapi.detectSingleFace(profileImg, opts).withFaceLandmarks(true).withFaceDescriptor(),
+      ]);
+
+      if (!liveResult) {
+        console.warn("⚠️ No face detected in live photo");
+        setFaceStatus("failed");
+        return false;
+      }
+      if (!profileResult) {
+        console.warn("⚠️ No face detected in profile photo — skipping check");
+        setFaceStatus("passed"); // Fallback: profile photo unusable
+        return true;
+      }
+
+      // Euclidean distance: < 0.5 = same person, > 0.5 = different person
+      const distance = faceapi.euclideanDistance(liveResult.descriptor, profileResult.descriptor);
+      console.log(`📏 Face distance: ${distance.toFixed(3)} (threshold: 0.5)`);
+
+      if (distance < 0.5) {
+        console.log("✅ Face match!");
+        setFaceStatus("passed");
+        return true;
+      } else {
+        console.warn("❌ Face mismatch!");
+        setFaceStatus("failed");
+        return false;
+      }
+    } catch (err) {
+      console.error("❌ Face verification error:", err);
+      setFaceStatus("passed"); // Fail-open: don't block if error occurs
+      return true;
+    }
   };
   // ─────────────────────────────────────────────────────────────
 
@@ -206,7 +242,25 @@ const StudentForm = ({ togglePopup }) => {
       return;
     }
 
+    // Check photo is captured
+    if (!photoData) {
+      alert("Please capture your photo first");
+      return;
+    }
+
     try {
+      // ─────────────────────────────────────────────────────────────
+      // FACE VERIFICATION: Check before anything else
+      // ─────────────────────────────────────────────────────────────
+      console.log("👀 Running face verification...");
+      const faceMatch = await verifyFace(photoData);
+      if (!faceMatch) {
+        setResult({ type: "faceMismatch" });
+        return;
+      }
+      console.log("✅ Face verified! Proceeding...");
+      // ─────────────────────────────────────────────────────────────
+
       // Get user IP address
       axios.defaults.withCredentials = false;
       const res = await axios.get("https://api64.ipify.org?format=json");
@@ -214,35 +268,11 @@ const StudentForm = ({ togglePopup }) => {
       let IP = res.data.ip;
 
       // ─────────────────────────────────────────────────────────────
-      // PHASE 3: Capture GPS readings instead of single point
+      // GPS: Capture readings (up to 5, minimum 1)
       // ─────────────────────────────────────────────────────────────
-      console.log("🚀 Starting GPS capture for 3+ minutes...");
+      console.log("🚀 Starting GPS capture...");
       const gpsReadingsArray = await captureGPSReadings();
-
-      if (gpsReadingsArray.length < 5) {
-        alert(
-          `Not enough GPS readings. Got ${gpsReadingsArray.length}, need 5+`
-        );
-        return;
-      }
-
-      console.log(`✅ Captured ${gpsReadingsArray.length} GPS readings`);
-
-      // ─────────────────────────────────────────────────────────────
-      // PHASE 4: Bluetooth Detection
-      // ─────────────────────────────────────────────────────────────
-      console.log("📡 Bluetooth check...");
-      
-      // 🎯 OPTION 1 (TESTING): Mock Bluetooth
-      const bluetoothDetected = true;
-      console.log(`✅ [MOCK] Bluetooth: DETECTED`);
-      
-      // 🔄 OPTION 2 (PRODUCTION): Real Bluetooth detection
-      // Uncomment below and comment above when ready to use real Bluetooth
-      // const bluetoothDetected = await checkBluetoothPresence();
-      // console.log(
-      //   `${bluetoothDetected ? "✅" : "⚠️"} Bluetooth: ${bluetoothDetected ? "DETECTED" : "NOT DETECTED"}`
-      // );
+      console.log(`✅ Captured ${gpsReadingsArray.length} GPS reading(s)`);
       // ─────────────────────────────────────────────────────────────
 
       // Use FormData for multipart/form-data upload
@@ -253,14 +283,7 @@ const StudentForm = ({ togglePopup }) => {
       formData.append("teacher_email", localStorage.getItem("teacher_email"));
       formData.append("IP", IP);
       formData.append("date", new Date().toISOString().split("T")[0]);
-
-      // ─────────────────────────────────────────────────────────────
-      // PHASE 3 + 4: Send GPS array + Bluetooth detection
-      // ─────────────────────────────────────────────────────────────
       formData.append("gps_readings", JSON.stringify(gpsReadingsArray));
-      formData.append("bluetooth_detected", bluetoothDetected); // NEW: Actual BT status
-      // ─────────────────────────────────────────────────────────────
-
       formData.append("student_email", localStorage.getItem("email"));
 
       // Append the image blob with field name "image" (must match multer's field name)
@@ -268,7 +291,7 @@ const StudentForm = ({ togglePopup }) => {
         formData.append("image", image, "photo.png");
       }
 
-      console.log("📤 Sending attendance with GPS array...");
+      console.log("📤 Sending attendance...");
       const response = await axios.post(
         "http://localhost:5000/sessions/attend_session",
         formData,
@@ -279,50 +302,17 @@ const StudentForm = ({ togglePopup }) => {
         }
       );
 
-      // ─────────────────────────────────────────────────────────────
-      // PHASE 5: Show validation status from backend
-      // ─────────────────────────────────────────────────────────────
       const { status, consistency_score } = response.data;
-      const statusEmoji = {
-        VERIFIED: "✅",
-        SUSPICIOUS: "⚠️",
-        OUTSIDE_GEOFENCE: "❌",
-      }[status] || "❓";
-
-      document.querySelector(
-        ".form-popup-inner"
-      ).innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-          <h2>${statusEmoji} ${response.data.message}</h2>
-          <p style="font-size: 14px; color: #666;">
-            Status: <strong>${status}</strong><br/>
-            Accuracy: <strong>${(consistency_score * 100).toFixed(0)}%</strong>
-          </p>
-        </div>
-      `;
-      // ─────────────────────────────────────────────────────────────
+      setResult({ type: "success", message: response.data.message, status, consistency_score });
     } catch (err) {
       console.error("❌ Attendance Error:", err);
 
       // ── QR Expired (HTTP 410) ─────────────────────────────────────
       if (err.response?.status === 410 || err.response?.data?.expired) {
-        document.querySelector(".form-popup-inner").innerHTML = `
-          <div style="text-align: center; padding: 24px;">
-            <div style="font-size: 48px; margin-bottom: 12px;">⏰</div>
-            <h2 style="color: #b91c1c; margin: 0 0 8px 0;">QR Code Expired</h2>
-            <p style="font-size: 14px; color: #6b7280; margin: 0 0 16px 0;">
-              The 15-minute attendance window for this session has closed.
-            </p>
-            <p style="font-size: 12px; color: #9ca3af; background: #f3f4f6; padding: 10px; border-radius: 6px; word-break: break-word;">
-              ${err.response?.data?.message || "Please ask your teacher to create a new session."}
-            </p>
-          </div>
-        `;
+        setResult({ type: "expired", message: err.response?.data?.message || "Please ask your teacher to create a new session." });
         return;
       }
-      // ─────────────────────────────────────────────────────────────
 
-      // Generic error messages
       let errorMsg = "Error marking attendance: ";
       if (err.response?.status === 400) {
         errorMsg += err.response.data?.message || "Bad request (check console)";
@@ -331,21 +321,8 @@ const StudentForm = ({ togglePopup }) => {
       } else {
         errorMsg += err.message;
       }
-
       console.error("Full error response:", err.response?.data);
-
-      // Show error in popup
-      document.querySelector(".form-popup-inner").innerHTML = `
-        <div style="text-align: center; padding: 20px;">
-          <h2>❌ Error</h2>
-          <p style="font-size: 13px; color: #dc2626; word-break: break-word;">
-            ${errorMsg}
-          </p>
-          <button onClick="location.reload()" style="padding: 10px 20px; margin-top: 10px;">
-            Try Again
-          </button>
-        </div>
-      `;
+      setResult({ type: "error", errorMsg });
     }
   };
 
@@ -355,118 +332,168 @@ const StudentForm = ({ togglePopup }) => {
         <strong>X</strong>
       </button>
       <div className="form-popup-inner">
-        <h5>Enter Your Details</h5>
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* PHASE 3: Show GPS capture progress */}
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {isCapturingGPS && (
-          <div
-            style={{
-              background: "#f0f9ff",
-              border: "2px solid #3b82f6",
-              borderRadius: 8,
-              padding: "16px",
-              marginBottom: 16,
-              textAlign: "center",
-            }}
-          >
-            <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "#1f2937" }}>
-              📍 Capturing GPS Locations...
-            </p>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 6,
-                marginBottom: 8,
-              }}
-            >
-              {[1, 2, 3, 4, 5].map((i) => (
+        {/* ── RESULT SCREEN: shown after submission ── */}
+        {result ? (
+          <div style={{ textAlign: "center", padding: "24px" }}>
+            {result.type === "success" && (() => {
+              const emoji = { VERIFIED: "✅", SUSPICIOUS: "⚠️", OUTSIDE_GEOFENCE: "❌" }[result.status] || "❓";
+              return (
+                <>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>{emoji}</div>
+                  <h2>{result.message}</h2>
+                  <p style={{ fontSize: 14, color: "#6b7280" }}>
+                    Status: <strong>{result.status}</strong><br />
+                    Accuracy: <strong>{(result.consistency_score * 100).toFixed(0)}%</strong>
+                  </p>
+                </>
+              );
+            })()}
+            {result.type === "faceMismatch" && (
+              <>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
+                <h2 style={{ color: "#b91c1c" }}>Face Mismatch</h2>
+                <p style={{ fontSize: 14, color: "#6b7280" }}>
+                  Your face does not match the registered profile photo.
+                  Please ensure you are the registered student.
+                </p>
+                <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", marginTop: 10 }}>
+                  Try Again
+                </button>
+              </>
+            )}
+            {result.type === "expired" && (
+              <>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>⏰</div>
+                <h2 style={{ color: "#b91c1c" }}>QR Code Expired</h2>
+                <p style={{ fontSize: 14, color: "#6b7280" }}>
+                  The 15-minute attendance window for this session has closed.
+                </p>
+                <p style={{ fontSize: 12, color: "#9ca3af", background: "#f3f4f6", padding: 10, borderRadius: 6, wordBreak: "break-word" }}>
+                  {result.message}
+                </p>
+              </>
+            )}
+            {result.type === "error" && (
+              <>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
+                <h2>Error</h2>
+                <p style={{ fontSize: 13, color: "#dc2626", wordBreak: "break-word" }}>
+                  {result.errorMsg}
+                </p>
+                <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", marginTop: 10 }}>
+                  Try Again
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+          <>
+            <h5>Enter Your Details</h5>
+
+            {/* ── FACE VERIFICATION STATUS BANNER ── */}
+            {faceStatus === "verifying" && (
+              <div style={{ background: "#eff6ff", border: "2px solid #3b82f6", borderRadius: 8, padding: "12px 16px", marginBottom: 12, textAlign: "center", fontSize: 14, color: "#1d4ed8" }}>
+                🧠 Verifying your identity... please wait
+              </div>
+            )}
+            {faceStatus === "passed" && (
+              <div style={{ background: "#d1fae5", border: "2px solid #10b981", borderRadius: 8, padding: "12px 16px", marginBottom: 12, textAlign: "center", fontSize: 14, color: "#065f46" }}>
+                ✅ Identity verified!
+              </div>
+            )}
+            {faceStatus === "failed" && (
+              <div style={{ background: "#fee2e2", border: "2px solid #ef4444", borderRadius: 8, padding: "12px 16px", marginBottom: 12, textAlign: "center", fontSize: 14, color: "#991b1b" }}>
+                ❌ Face mismatch — attendance blocked
+              </div>
+            )}
+
+            {/* ── GPS CAPTURE PROGRESS ── */}
+            {isCapturingGPS && (
+              <div
+                style={{
+                  background: "#f0f9ff",
+                  border: "2px solid #3b82f6",
+                  borderRadius: 8,
+                  padding: "16px",
+                  marginBottom: 16,
+                  textAlign: "center",
+                }}
+              >
+                <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "#1f2937" }}>
+                  📍 Capturing GPS Locations...
+                </p>
                 <div
-                  key={i}
                   style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 4,
-                    background:
-                      gpsProgress >= i
-                        ? "#10b981"
-                        : "#e5e7eb",
                     display: "flex",
-                    alignItems: "center",
                     justifyContent: "center",
-                    color: gpsProgress >= i ? "#fff" : "#9ca3af",
-                    fontWeight: 700,
-                    fontSize: 12,
+                    gap: 6,
+                    marginBottom: 8,
                   }}
                 >
-                  {i}
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 4,
+                        background: gpsProgress >= i ? "#10b981" : "#e5e7eb",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: gpsProgress >= i ? "#fff" : "#9ca3af",
+                        fontWeight: 700,
+                        fontSize: 12,
+                      }}
+                    >
+                      {i}
+                    </div>
+                  ))}
                 </div>
-              ))}
+                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+                  Reading {gpsProgress} of 5 (usually done in a few seconds)
+                </p>
+              </div>
+            )}
+
+            {!photoData && <video ref={videoRef} width={300} autoPlay={true} />}
+            {photoData && <img src={photoData} width={300} alt="Captured" />}
+            <div className="cam-btn">
+              <button onClick={startCamera} disabled={isCapturingGPS}>
+                Start Camera
+              </button>
+              <button onClick={capturePhoto} disabled={isCapturingGPS}>
+                Capture
+              </button>
+              <button onClick={ResetCamera} disabled={isCapturingGPS}>
+                Reset
+              </button>
             </div>
-            <p style={{ margin: 0, fontSize: 12, color: "#6b7280 " }}>
-              Reading {gpsProgress} of 5 (usually done in a few seconds)
-            </p>
-          </div>
+
+            <form onSubmit={AttendSession}>
+              <input
+                type="text"
+                name="regno"
+                placeholder="RegNo"
+                autoComplete="off"
+                disabled={isCapturingGPS}
+              />
+              <button
+                type="submit"
+                disabled={isCapturingGPS}
+                style={{
+                  opacity: isCapturingGPS ? 0.5 : 1,
+                  cursor: isCapturingGPS ? "not-allowed" : "pointer",
+                }}
+              >
+                {isCapturingGPS ? "Capturing GPS..." : "Done"}
+              </button>
+            </form>
+          </>
         )}
-        {/* ───────────────────────────────────────────────────────────────────── */}
+        {/* ── end result ternary ── */}
 
-        {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* PHASE 4: Show mock Bluetooth status during GPS capture */}
-        {isCapturingGPS && (
-          <div
-            style={{
-              background: "#d1fae5",
-              border: "2px solid #10b981",
-              borderRadius: 8,
-              padding: "12px",
-              marginBottom: 16,
-              textAlign: "center",
-              fontSize: 13,
-              color: "#065f46",
-            }}
-          >
-            <p style={{ margin: 0 }}>
-              📡 [MOCK] ✅ Bluetooth ready for testing
-            </p>
-          </div>
-        )}
-        {/* ───────────────────────────────────────────────────────────────────── */}
-
-        {!photoData && <video ref={videoRef} width={300} autoPlay={true} />}
-        {photoData && <img src={photoData} width={300} alt="Captured" />}
-        <div className="cam-btn">
-          <button onClick={startCamera} disabled={isCapturingGPS}>
-            Start Camera
-          </button>
-          <button onClick={capturePhoto} disabled={isCapturingGPS}>
-            Capture
-          </button>
-          <button onClick={ResetCamera} disabled={isCapturingGPS}>
-            Reset
-          </button>
-        </div>
-
-        <form onSubmit={AttendSession}>
-          <input
-            type="text"
-            name="regno"
-            placeholder="RegNo"
-            autoComplete="off"
-            disabled={isCapturingGPS}
-          />
-          <button
-            type="submit"
-            disabled={isCapturingGPS}
-            style={{
-              opacity: isCapturingGPS ? 0.5 : 1,
-              cursor: isCapturingGPS ? "not-allowed" : "pointer",
-            }}
-          >
-            {isCapturingGPS ? "Capturing GPS..." : "Done"}
-          </button>
-        </form>
       </div>
     </div>
   );

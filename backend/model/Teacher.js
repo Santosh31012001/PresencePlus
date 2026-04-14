@@ -25,10 +25,10 @@ const userSchema = new schema(
             date: { type: Date, required: true },
             student_email: { type: String, required: true },
             
-            // ─── PHASE 1: New fields for hybrid GPS + Bluetooth ───
+            // GPS + attendance validation fields
             status: { type: String, enum: ["VERIFIED", "SUSPICIOUS", "OUTSIDE_GEOFENCE"], default: "SUSPICIOUS" },
             
-            // GPS array: multiple readings over 2-3 minutes
+            // GPS array: multiple readings
             gps_readings: [
               {
                 latitude: { type: Number, required: true },
@@ -43,9 +43,6 @@ const userSchema = new schema(
               longitude: { type: Number },
             },
             
-            // Bluetooth detection flag
-            bluetooth_detected: { type: Boolean, default: false },
-            
             // GPS consistency score (0-1): how tightly clustered are the readings
             gps_consistency_score: { type: Number, default: 0 },
             
@@ -54,7 +51,6 @@ const userSchema = new schema(
             
             // Legacy: Old single location (kept for backward compatibility)
             Location: { type: String },
-            // ───────────────────────────────────────────────────────
           },
         ],
       },
