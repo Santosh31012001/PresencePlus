@@ -37,7 +37,7 @@ const Nav = () => {
             transition="all 0.2s"
             _hover={{ opacity: 0.8 }}
           >
-            PresencePlus
+            GeoAttend
           </Box>
 
           {/* Logout Button */}

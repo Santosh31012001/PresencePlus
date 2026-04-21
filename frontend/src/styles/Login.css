@@ -1,5 +1,5 @@
 .login-main {
-  min-height: calc(100vh - 120px);
+  min-height: calc(90vh - 100px);
   display: flex;
   gap: 32px;
   padding: 60px clamp(20px, 5vw, 80px);

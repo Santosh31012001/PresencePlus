@@ -10,6 +10,11 @@ import {
   StudentDashboard,
   ForgotPassword,
 } from "./pages/Index";
+import TeacherLayout from "./pages/TeacherLayout";
+import TeacherSessions from "./pages/TeacherSessions";
+import TeacherStudents from "./pages/TeacherStudents";
+import TeacherAnalytics from "./pages/TeacherAnalytics";
+import TeacherSettings from "./pages/TeacherSettings";
 
 const router = createBrowserRouter([
   {
@@ -27,10 +32,6 @@ const router = createBrowserRouter([
       {
         path: "register",
         element: <Register />,
-      },
-      {
-        path: "teacher-dashboard",
-        element: <TeacherDashboard />,
       },
       {
         path: "student-dashboard",
@@ -51,6 +52,33 @@ const router = createBrowserRouter([
       {
         path: "*",
         element: <h1>404 Not Found</h1>,
+      },
+    ],
+  },
+  // Teacher routes — sidebar layout (no top nav)
+  {
+    path: "/teacher-dashboard",
+    element: <TeacherLayout />,
+    children: [
+      {
+        index: true,
+        element: <TeacherDashboard />,
+      },
+      {
+        path: "sessions",
+        element: <TeacherSessions />,
+      },
+      {
+        path: "students",
+        element: <TeacherStudents />,
+      },
+      {
+        path: "analytics",
+        element: <TeacherAnalytics />,
+      },
+      {
+        path: "settings",
+        element: <TeacherSettings />,
       },
     ],
   },
