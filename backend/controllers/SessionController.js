@@ -392,12 +392,39 @@ async function GetStudentSessions(req, res) {
   }
 }
 
+// delete a session
+async function DeleteSession(req, res) {
+  try {
+    const tokenData = req.user;
+    const { session_id } = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({ message: "session_id is required" });
+    }
+
+    const result = await Teacher.findOneAndUpdate(
+      { email: tokenData.email },
+      { $pull: { sessions: { session_id } } },
+      { new: true }
+    );
+
+    if (!result) {
+      return res.status(404).json({ message: "Teacher not found" });
+    }
+
+    res.status(200).json({ message: "Session deleted successfully" });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
 const SessionController = {
   CreateNewSession,
   GetAllTeacherSessions,
   GetQR,
   AttendSession,
   GetStudentSessions,
+  DeleteSession,
 };
 
 export default SessionController;

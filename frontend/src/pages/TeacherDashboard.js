@@ -23,6 +23,7 @@ import {
   MdAccessTime,
   MdArrowForward,
   MdQrCode,
+  MdDelete,
 } from "react-icons/md";
 import StatsCard from "../components/StatsCard";
 import NewSession from "./NewSession";
@@ -37,6 +38,8 @@ const TeacherDashboard = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSessionDisplay, setSessionDisplay] = useState(false);
   const [currentSession, setCurrentSession] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null); // session_id awaiting confirm
+  const [deletingId, setDeletingId] = useState(null);           // session_id being deleted
   const navigate = useNavigate();
 
   const updateList = async () => {
@@ -71,6 +74,23 @@ const TeacherDashboard = () => {
   const togglePopup = () => {
     setIsOpen(!isOpen);
     if (isOpen) updateList(); // Refresh list when closing popup
+  };
+
+  const deleteSession = async (session_id) => {
+    setDeletingId(session_id);
+    try {
+      await axios.post("http://localhost:5000/sessions/deleteSession", {
+        token,
+        session_id,
+      });
+      // Optimistic: remove from local state immediately
+      setSessionList((prev) => prev.filter((s) => s.session_id !== session_id));
+    } catch (err) {
+      console.error("Delete session error:", err);
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
   };
 
   useEffect(() => {
@@ -262,83 +282,155 @@ const TeacherDashboard = () => {
                       px={3}
                       borderRadius="14px"
                       cursor="pointer"
-                      _hover={{ bg: "#f8f7ff" }}
+                      _hover={confirmDeleteId === session.session_id ? {} : { bg: "#f8f7ff" }}
                       transition="all 0.15s"
-                      onClick={() => openSessionDetails(session.session_id)}
+                      onClick={() => {
+                        if (confirmDeleteId === session.session_id) return;
+                        openSessionDetails(session.session_id);
+                      }}
                       gap={3}
                     >
                       <Flex align="center" gap={4} flex={1} minW={0}>
                         <Box
-                          bg="linear-gradient(135deg, #7a69ff, #9b8aff)"
+                          bg={confirmDeleteId === session.session_id
+                            ? "linear-gradient(135deg, #ff6b81, #ff92a0)"
+                            : "linear-gradient(135deg, #7a69ff, #9b8aff)"}
                           borderRadius="12px"
                           p={3}
                           flexShrink={0}
-                          boxShadow="0 4px 10px rgba(122,105,255,0.3)"
+                          boxShadow={confirmDeleteId === session.session_id
+                            ? "0 4px 10px rgba(255,107,129,0.35)"
+                            : "0 4px 10px rgba(122,105,255,0.3)"}
+                          transition="all 0.2s"
                         >
-                          <MdVideoCall size={18} color="white" />
+                          {confirmDeleteId === session.session_id
+                            ? <MdDelete size={18} color="white" />
+                            : <MdVideoCall size={18} color="white" />}
                         </Box>
                         <Box minW={0} flex={1}>
                           <Text
                             fontWeight="600"
-                            color="gray.800"
+                            color={confirmDeleteId === session.session_id ? "red.500" : "gray.800"}
                             fontSize="sm"
                             lineClamp={1}
                             overflow="hidden"
                             whiteSpace="nowrap"
                             textOverflow="ellipsis"
+                            transition="color 0.2s"
                           >
-                            {session.name || "Untitled Session"}
+                            {confirmDeleteId === session.session_id
+                              ? "Delete this session?"
+                              : session.name || "Untitled Session"}
                           </Text>
                           <HStack gap={3} mt={1}>
-                            <HStack gap={1}>
-                              <MdCalendarToday size={11} color="#9ca3af" />
-                              <Text fontSize="xs" color="gray.400">
-                                {formatDate(session.date)}
+                            {confirmDeleteId !== session.session_id && (
+                              <>
+                                <HStack gap={1}>
+                                  <MdCalendarToday size={11} color="#9ca3af" />
+                                  <Text fontSize="xs" color="gray.400">
+                                    {formatDate(session.date)}
+                                  </Text>
+                                </HStack>
+                                {session.time && (
+                                  <HStack gap={1}>
+                                    <MdAccessTime size={11} color="#9ca3af" />
+                                    <Text fontSize="xs" color="gray.400">
+                                      {session.time}
+                                    </Text>
+                                  </HStack>
+                                )}
+                              </>
+                            )}
+                            {confirmDeleteId === session.session_id && (
+                              <Text fontSize="xs" color="red.400">
+                                This will permanently remove the session & attendance data.
                               </Text>
-                            </HStack>
-                            {session.time && (
-                              <HStack gap={1}>
-                                <MdAccessTime size={11} color="#9ca3af" />
-                                <Text fontSize="xs" color="gray.400">
-                                  {session.time}
-                                </Text>
-                              </HStack>
                             )}
                           </HStack>
                         </Box>
                       </Flex>
 
-                      <HStack gap={2} flexShrink={0}>
-                        {/* Attendance count chip */}
-                        <HStack
-                          gap={1}
-                          bg="#eafaf4"
-                          px={2}
-                          py={1}
-                          borderRadius="8px"
-                          border="1px solid rgba(61,212,152,0.2)"
-                        >
-                          <MdPeople size={12} color="#3dd498" />
-                          <Text fontSize="xs" fontWeight="700" color="#3dd498">
-                            {attendanceCount}
-                          </Text>
-                        </HStack>
-                        {session.duration && (
-                          <Badge
-                            borderRadius="8px"
-                            px={2}
-                            py={1}
-                            fontSize="xs"
-                            bg="#f0eeff"
-                            color="#7a69ff"
-                            fontWeight="600"
-                          >
-                            {session.duration}m
-                          </Badge>
+                      <HStack gap={2} flexShrink={0} onClick={(e) => e.stopPropagation()}>
+                        {confirmDeleteId === session.session_id ? (
+                          /* ── Confirm / Cancel strip ── */
+                          <>
+                            <Button
+                              size="xs"
+                              bg="#ff6b81"
+                              color="white"
+                              borderRadius="8px"
+                              fontWeight="700"
+                              px={3}
+                              _hover={{ bg: "#e55c70" }}
+                              onClick={() => deleteSession(session.session_id)}
+                              loading={deletingId === session.session_id}
+                            >
+                              {deletingId === session.session_id ? <Spinner size="xs" /> : "Delete"}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              color="gray.500"
+                              borderRadius="8px"
+                              fontWeight="600"
+                              px={3}
+                              _hover={{ bg: "gray.100" }}
+                              onClick={() => setConfirmDeleteId(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          /* ── Normal right side ── */
+                          <>
+                            {/* Attendance count chip */}
+                            <HStack
+                              gap={1}
+                              bg="#eafaf4"
+                              px={2}
+                              py={1}
+                              borderRadius="8px"
+                              border="1px solid rgba(61,212,152,0.2)"
+                            >
+                              <MdPeople size={12} color="#3dd498" />
+                              <Text fontSize="xs" fontWeight="700" color="#3dd498">
+                                {attendanceCount}
+                              </Text>
+                            </HStack>
+                            {session.duration && (
+                              <Badge
+                                borderRadius="8px"
+                                px={2}
+                                py={1}
+                                fontSize="xs"
+                                bg="#f0eeff"
+                                color="#7a69ff"
+                                fontWeight="600"
+                              >
+                                {session.duration}m
+                              </Badge>
+                            )}
+                            {/* Delete trigger */}
+                            <Box
+                              as="button"
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              p="6px"
+                              borderRadius="8px"
+                              color="gray.300"
+                              _hover={{ color: "#ff6b81", bg: "#fff0f1" }}
+                              transition="all 0.15s"
+                              title="Delete session"
+                              onClick={() => setConfirmDeleteId(session.session_id)}
+                            >
+                              <MdDelete size={16} />
+                            </Box>
+                            <Box color="gray.300">
+                              <MdArrowForward size={16} />
+                            </Box>
+                          </>
                         )}
-                        <Box color="gray.300">
-                          <MdArrowForward size={16} />
-                        </Box>
                       </HStack>
                     </Flex>
                     {index < recentSessions.length - 1 && (

@@ -27,5 +27,7 @@ router.post(
   JWT.verifyToken,
   SessionController.GetStudentSessions
 );
+// delete a session
+router.post("/deleteSession", JWT.verifyToken, SessionController.DeleteSession);
 
 export default router;
