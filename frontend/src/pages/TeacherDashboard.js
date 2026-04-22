@@ -57,9 +57,15 @@ const TeacherDashboard = () => {
     }
   };
 
-  const toggleSessionDetails = (session_id) => {
-    setCurrentSession(sessionList.filter((s) => s.session_id === session_id));
-    setSessionDisplay(!isSessionDisplay);
+  const openSessionDetails = (session_id) => {
+    const matched = sessionList.filter((s) => s.session_id === session_id);
+    setCurrentSession(matched);
+    setSessionDisplay(true);
+  };
+
+  const closeSessionDetails = () => {
+    setSessionDisplay(false);
+    setCurrentSession("");
   };
 
   const togglePopup = () => {
@@ -118,7 +124,6 @@ const TeacherDashboard = () => {
         </Box>
 
         <Button
-          leftIcon={<MdAdd size={18} />}
           onClick={togglePopup}
           bg="linear-gradient(135deg, #7a69ff, #6558ee)"
           color="white"
@@ -133,7 +138,11 @@ const TeacherDashboard = () => {
           }}
           _active={{ transform: "translateY(0)" }}
           transition="all 0.2s"
+          display="flex"
+          alignItems="center"
+          gap={2}
         >
+          <MdAdd size={18} />
           New Session
         </Button>
       </Flex>
@@ -191,12 +200,15 @@ const TeacherDashboard = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                color="brand.500"
-                rightIcon={<MdArrowForward />}
+                color="#7a69ff"
                 _hover={{ bg: "#f0eeff" }}
                 borderRadius="10px"
+                display="flex"
+                alignItems="center"
+                gap={1}
+                onClick={() => navigate("/teacher-dashboard/sessions")}
               >
-                View All
+                View All <MdArrowForward size={14} />
               </Button>
             )}
           </Flex>
@@ -239,83 +251,102 @@ const TeacherDashboard = () => {
             </Flex>
           ) : (
             <VStack gap={0} align="stretch">
-              {recentSessions.map((session, index) => (
-                <Box key={session.session_id || index}>
-                  <Flex
-                    align="center"
-                    justify="space-between"
-                    py={4}
-                    px={3}
-                    borderRadius="14px"
-                    cursor="pointer"
-                    _hover={{ bg: "#f8f7ff" }}
-                    transition="all 0.15s"
-                    onClick={() => toggleSessionDetails(session.session_id)}
-                    gap={3}
-                  >
-                    <Flex align="center" gap={4} flex={1} minW={0}>
-                      <Box
-                        bg="linear-gradient(135deg, #7a69ff, #9b8aff)"
-                        borderRadius="12px"
-                        p={3}
-                        flexShrink={0}
-                        boxShadow="0 4px 10px rgba(122,105,255,0.3)"
-                      >
-                        <MdVideoCall size={18} color="white" />
-                      </Box>
-                      <Box minW={0}>
-                        <Text
-                          fontWeight="600"
-                          color="gray.800"
-                          fontSize="sm"
-                          noOfLines={1}
+              {recentSessions.map((session, index) => {
+                const attendanceCount = session.attendance?.length || 0;
+                return (
+                  <Box key={session.session_id || index}>
+                    <Flex
+                      align="center"
+                      justify="space-between"
+                      py={4}
+                      px={3}
+                      borderRadius="14px"
+                      cursor="pointer"
+                      _hover={{ bg: "#f8f7ff" }}
+                      transition="all 0.15s"
+                      onClick={() => openSessionDetails(session.session_id)}
+                      gap={3}
+                    >
+                      <Flex align="center" gap={4} flex={1} minW={0}>
+                        <Box
+                          bg="linear-gradient(135deg, #7a69ff, #9b8aff)"
+                          borderRadius="12px"
+                          p={3}
+                          flexShrink={0}
+                          boxShadow="0 4px 10px rgba(122,105,255,0.3)"
                         >
-                          {session.name || "Untitled Session"}
-                        </Text>
-                        <HStack gap={3} mt={1}>
-                          <HStack gap={1}>
-                            <MdCalendarToday size={11} color="#9ca3af" />
-                            <Text fontSize="xs" color="gray.400">
-                              {formatDate(session.date)}
-                            </Text>
-                          </HStack>
-                          {session.time && (
+                          <MdVideoCall size={18} color="white" />
+                        </Box>
+                        <Box minW={0} flex={1}>
+                          <Text
+                            fontWeight="600"
+                            color="gray.800"
+                            fontSize="sm"
+                            lineClamp={1}
+                            overflow="hidden"
+                            whiteSpace="nowrap"
+                            textOverflow="ellipsis"
+                          >
+                            {session.name || "Untitled Session"}
+                          </Text>
+                          <HStack gap={3} mt={1}>
                             <HStack gap={1}>
-                              <MdAccessTime size={11} color="#9ca3af" />
+                              <MdCalendarToday size={11} color="#9ca3af" />
                               <Text fontSize="xs" color="gray.400">
-                                {session.time}
+                                {formatDate(session.date)}
                               </Text>
                             </HStack>
-                          )}
-                        </HStack>
-                      </Box>
-                    </Flex>
+                            {session.time && (
+                              <HStack gap={1}>
+                                <MdAccessTime size={11} color="#9ca3af" />
+                                <Text fontSize="xs" color="gray.400">
+                                  {session.time}
+                                </Text>
+                              </HStack>
+                            )}
+                          </HStack>
+                        </Box>
+                      </Flex>
 
-                    <HStack gap={2} flexShrink={0}>
-                      {session.duration && (
-                        <Badge
-                          colorScheme="purple"
-                          borderRadius="8px"
+                      <HStack gap={2} flexShrink={0}>
+                        {/* Attendance count chip */}
+                        <HStack
+                          gap={1}
+                          bg="#eafaf4"
                           px={2}
                           py={1}
-                          fontSize="xs"
-                          bg="#f0eeff"
-                          color="#7a69ff"
-                          fontWeight="600"
+                          borderRadius="8px"
+                          border="1px solid rgba(61,212,152,0.2)"
                         >
-                          {session.duration} min
-                        </Badge>
-                      )}
-                      <Box color="gray.300">
-                        <MdArrowForward size={16} />
-                      </Box>
-                    </HStack>
-                  </Flex>
-                  {index < recentSessions.length - 1 && (
-                    <Separator borderColor="gray.100" />
-                  )}
-                </Box>
-              ))}
+                          <MdPeople size={12} color="#3dd498" />
+                          <Text fontSize="xs" fontWeight="700" color="#3dd498">
+                            {attendanceCount}
+                          </Text>
+                        </HStack>
+                        {session.duration && (
+                          <Badge
+                            borderRadius="8px"
+                            px={2}
+                            py={1}
+                            fontSize="xs"
+                            bg="#f0eeff"
+                            color="#7a69ff"
+                            fontWeight="600"
+                          >
+                            {session.duration}m
+                          </Badge>
+                        )}
+                        <Box color="gray.300">
+                          <MdArrowForward size={16} />
+                        </Box>
+                      </HStack>
+                    </Flex>
+                    {index < recentSessions.length - 1 && (
+                      <Separator borderColor="gray.100" />
+                    )}
+                  </Box>
+                );
+              })}
             </VStack>
           )}
         </Box>
@@ -368,7 +399,6 @@ const TeacherDashboard = () => {
                   transition="all 0.2s"
                   onClick={item.action}
                   border="1px solid transparent"
-                  _active={{ border: `1px solid ${item.color}30` }}
                 >
                   <Box
                     bg={item.bg}
@@ -443,21 +473,10 @@ const TeacherDashboard = () => {
 
       {/* Popups */}
       {isSessionDisplay && (
-        <Box
-          position="fixed"
-          inset={0}
-          bg="rgba(0,0,0,0.5)"
-          backdropFilter="blur(4px)"
-          zIndex={100}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <SessionDetails
-            currentSession={currentSession}
-            toggleSessionDetails={toggleSessionDetails}
-          />
-        </Box>
+        <SessionDetails
+          currentSession={currentSession}
+          toggleSessionDetails={closeSessionDetails}
+        />
       )}
       {isOpen && (
         <Box

@@ -92,7 +92,7 @@ const AnimatedLine = memo(function AnimatedLine({ positions, color }) {
   return (
     <>
       <Polyline positions={positions} pathOptions={{ color, weight: 10, opacity: 0.15 }} />
-      <Polyline positions={positions} pathOptions={{ color, weight: 3,  opacity: 0.9  }} />
+      <Polyline positions={positions} pathOptions={{ color, weight: 3, opacity: 0.9 }} />
       <Polyline positions={positions} pathOptions={{ color: "#fff", weight: 1.5, opacity: 0.5, dashArray: "8, 10" }} />
     </>
   );
@@ -130,7 +130,7 @@ const StudentMapModal = memo(function StudentMapModal({
     const [tLat, tLng] = sessionLocation.split(",").map(Number);
     const [sLat, sLng] = student.Location.split(",").map(Number);
     const dist = parseFloat(student.distance);
-    const rad  = parseFloat(radius);
+    const rad = parseFloat(radius);
     const isInside = dist <= rad;
     return {
       teacherPos: [tLat, tLng],
