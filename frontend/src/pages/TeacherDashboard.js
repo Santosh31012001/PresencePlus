@@ -178,7 +178,7 @@ const TeacherDashboard = () => {
         />
         <StatsCard
           label="Active Geofence"
-          value="50m"
+          value="20m"
           icon={<MdQrCode size={22} color="white" />}
           accent="#1fb6ff"
           trend="Default radius"
@@ -189,13 +189,6 @@ const TeacherDashboard = () => {
           icon={<MdPeople size={22} color="white" />}
           accent="#5be4a8"
           trend="Based on sessions"
-        />
-        <StatsCard
-          label="Avg. Attendance"
-          value="—"
-          icon={<MdCheckCircle size={22} color="white" />}
-          accent="#ff6b81"
-          trend="Cross-session rate"
         />
       </SimpleGrid>
 

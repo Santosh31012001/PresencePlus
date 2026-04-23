@@ -1,501 +1,621 @@
-// Student attendance form with face verification
 import React, { useState, useRef } from "react";
 import axios from "axios";
 import * as faceapi from "face-api.js";
-import "../styles/StudentForm.css";
+import { Box, Flex, Text, Button, VStack, HStack, Spinner } from "@chakra-ui/react";
+import {
+  MdClose, MdCameraAlt, MdFlipCameraAndroid,
+  MdCheckCircle, MdWarning, MdGpsFixed, MdSend,
+  MdFaceRetouchingNatural,
+} from "react-icons/md";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STATUS_CFG = {
+  VERIFIED:         { emoji: "✅", color: "#3dd498", bg: "#eafaf4", label: "Verified"          },
+  SUSPICIOUS:       { emoji: "⚠️", color: "#f59e0b", bg: "#fffbeb", label: "Suspicious"        },
+  OUTSIDE_GEOFENCE: { emoji: "❌", color: "#ff6b81", bg: "#fff0f1", label: "Outside Geofence"  },
+};
+
+const FACE_BANNERS = {
+  verifying: { bg: "#eff6ff", border: "rgba(59,130,246,0.3)",  color: "#1d4ed8", text: "🧠 Verifying your identity… please wait",  icon: (s) => <Spinner size="xs" color="#3b82f6" /> },
+  passed:    { bg: "#d1fae5", border: "rgba(16,185,129,0.3)",  color: "#065f46", text: "✅ Identity verified!",                     icon: () => <MdCheckCircle size={14} color="#10b981" /> },
+  failed:    { bg: "#fee2e2", border: "rgba(239,68,68,0.3)",   color: "#991b1b", text: "❌ Face mismatch — attendance blocked",      icon: () => <MdWarning size={14} color="#ef4444" /> },
+};
+
+// ─── Shared UI primitives ─────────────────────────────────────────────────────
+
+const Card = ({ children }) => (
+  <Box
+    bg="white"
+    borderRadius="24px"
+    boxShadow="0 24px 64px rgba(122,105,255,0.2)"
+    border="1px solid rgba(122,105,255,0.12)"
+    overflow="hidden"
+    w={{ base: "92vw", sm: "440px" }}
+    maxH="90vh"
+    overflowY="auto"
+  >
+    <Box h="3px" style={{ background: "linear-gradient(90deg, #7a69ff, #9b8aff)" }} />
+    {children}
+  </Box>
+);
+
+const SectionLabel = ({ children }) => (
+  <Text
+    fontSize="10px"
+    fontWeight="800"
+    color="gray.400"
+    textTransform="uppercase"
+    letterSpacing="0.1em"
+    mb={2}
+  >
+    {children}
+  </Text>
+);
+
+const FaceBanner = ({ status }) => {
+  const cfg = FACE_BANNERS[status];
+  if (!cfg) return null;
+  return (
+    <Flex
+      align="center"
+      gap={2}
+      bg={cfg.bg}
+      border={`1.5px solid ${cfg.border}`}
+      borderRadius="12px"
+      px={4} py="10px"
+      mb={4}
+      color={cfg.color}
+      fontSize="sm"
+      fontWeight="600"
+    >
+      {cfg.icon()}
+      <Text>{cfg.text}</Text>
+    </Flex>
+  );
+};
+
+const GpsBanner = ({ isCapturing }) => {
+  if (!isCapturing) return null;
+  return (
+    <Flex
+      align="center"
+      gap={3}
+      bg="#f0eeff"
+      border="1.5px solid rgba(122,105,255,0.25)"
+      borderRadius="12px"
+      px={4} py="10px"
+      mb={4}
+    >
+      <Spinner size="sm" color="#7a69ff" />
+      <Box>
+        <Text fontSize="sm" fontWeight="700" color="#7a69ff">Capturing GPS…</Text>
+        <Text fontSize="xs" color="gray.400">Please stay still for a moment</Text>
+      </Box>
+    </Flex>
+  );
+};
+
+// ─── Camera Section ───────────────────────────────────────────────────────────
+
+const CameraSection = ({ videoRef, photoData, onStart, onCapture, onReset, disabled }) => (
+  <Box mb={5}>
+    <SectionLabel>Step 1 — Capture Photo</SectionLabel>
+
+    {/* Preview area */}
+    <Box
+      borderRadius="14px"
+      overflow="hidden"
+      bg="#f8f7ff"
+      border="1.5px solid rgba(122,105,255,0.15)"
+      minH="180px"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      position="relative"
+    >
+      {photoData ? (
+        <Box as="img" src={photoData} w="100%" alt="Captured" display="block" />
+      ) : (
+        <>
+          <Box as="video" ref={videoRef} w="100%" autoPlay display="block" />
+          {!videoRef.current?.srcObject && (
+            <Flex
+              position="absolute" inset={0}
+              direction="column" align="center" justify="center" gap={2}
+              pointerEvents="none"
+            >
+              <MdCameraAlt size={36} color="#c4baff" />
+              <Text fontSize="xs" color="gray.400">Tap Start Camera</Text>
+            </Flex>
+          )}
+        </>
+      )}
+    </Box>
+
+    {/* Camera controls */}
+    <HStack gap={2} mt={3}>
+      <Button
+        flex={1} size="sm"
+        bg="#f0eeff" color="#7a69ff"
+        borderRadius="10px" fontWeight="600"
+        _hover={{ bg: "#e8e2ff" }}
+        onClick={onStart}
+        isDisabled={disabled}
+      >
+        <MdCameraAlt size={14} />
+        <Box as="span" ml={1}>Start</Box>
+      </Button>
+
+      <Button
+        flex={1} size="sm"
+        style={{ background: "linear-gradient(135deg, #7a69ff, #9b8aff)" }}
+        color="white"
+        borderRadius="10px" fontWeight="600"
+        boxShadow="0 4px 12px rgba(122,105,255,0.3)"
+        _hover={{ opacity: 0.9 }}
+        onClick={onCapture}
+        isDisabled={disabled}
+      >
+        <MdCameraAlt size={14} />
+        <Box as="span" ml={1}>Capture</Box>
+      </Button>
+
+      <Button
+        size="sm"
+        variant="ghost"
+        color="gray.400"
+        borderRadius="10px" fontWeight="600"
+        _hover={{ bg: "gray.100", color: "gray.600" }}
+        onClick={onReset}
+        isDisabled={disabled}
+      >
+        <MdFlipCameraAndroid size={14} />
+        <Box as="span" ml={1}>Redo</Box>
+      </Button>
+    </HStack>
+  </Box>
+);
+
+// ─── Submit Section ───────────────────────────────────────────────────────────
+
+const SubmitSection = ({ onSubmit, disabled, isCapturingGPS, isSubmitting }) => (
+  <Box as="form" onSubmit={onSubmit}>
+    <SectionLabel>Step 2 — Submit Details</SectionLabel>
+
+    <Box
+      as="input"
+      type="text"
+      name="regno"
+      placeholder="Registration Number"
+      autoComplete="off"
+      disabled={disabled}
+      w="100%"
+      px="14px"
+      py="10px"
+      mb={3}
+      fontSize="sm"
+      color="gray.800"
+      bg="#f8f7ff"
+      border="1.5px solid"
+      borderColor="rgba(122,105,255,0.2)"
+      borderRadius="10px"
+      outline="none"
+      display="block"
+      style={{ fontFamily: "inherit" }}
+      onFocus={(e) => { e.target.style.borderColor = "#7a69ff"; e.target.style.boxShadow = "0 0 0 3px rgba(122,105,255,0.12)"; }}
+      onBlur={(e)  => { e.target.style.borderColor = "rgba(122,105,255,0.2)"; e.target.style.boxShadow = "none"; }}
+    />
+
+    <Button
+      type="submit"
+      w="100%"
+      h="44px"
+      style={{
+        background: disabled
+          ? "#c4b5fd"
+          : "linear-gradient(135deg, #7a69ff, #6558ee)",
+      }}
+      color="white"
+      fontWeight="700"
+      fontSize="sm"
+      borderRadius="12px"
+      boxShadow={disabled ? "none" : "0 6px 20px rgba(122,105,255,0.38)"}
+      _hover={disabled ? {} : { transform: "translateY(-2px)", boxShadow: "0 10px 28px rgba(122,105,255,0.5)" }}
+      transition="all 0.2s"
+      isDisabled={disabled}
+      cursor={disabled ? "not-allowed" : "pointer"}
+    >
+      {isSubmitting || isCapturingGPS ? (
+        <HStack gap={2} justify="center">
+          <Spinner size="xs" />
+          <Text>{isCapturingGPS ? "Capturing GPS…" : "Submitting…"}</Text>
+        </HStack>
+      ) : (
+        <HStack gap={2} justify="center">
+          <MdSend size={15} />
+          <Text>Submit Attendance</Text>
+        </HStack>
+      )}
+    </Button>
+  </Box>
+);
+
+// ─── Result Screen ────────────────────────────────────────────────────────────
+
+const ResultScreen = ({ result, onClose }) => {
+  const isSuccess = result.type === "success";
+  const cfg = isSuccess ? (STATUS_CFG[result.status] || STATUS_CFG.SUSPICIOUS) : null;
+
+  const iconEmoji = isSuccess ? cfg.emoji
+    : result.type === "faceMismatch" ? "❌"
+    : result.type === "expired"      ? "⏰"
+    : "❌";
+
+  const iconBg = isSuccess ? cfg.bg
+    : result.type === "expired" ? "#fffbeb"
+    : "#fff0f1";
+
+  return (
+    <Card>
+      <VStack gap={5} p={8} align="center" textAlign="center">
+        {/* Icon */}
+        <Box
+          bg={iconBg}
+          borderRadius="50%"
+          w="80px" h="80px"
+          display="flex" alignItems="center" justifyContent="center"
+          fontSize="2rem"
+          boxShadow={`0 8px 24px ${isSuccess ? cfg.color : "#ff6b81"}22`}
+        >
+          {iconEmoji}
+        </Box>
+
+        {/* Success */}
+        {isSuccess && (
+          <>
+            <Text fontWeight="800" fontSize="xl" color="gray.800">{result.message}</Text>
+            <Box
+              bg={cfg.bg}
+              color={cfg.color}
+              border={`1px solid ${cfg.color}33`}
+              borderRadius="999px"
+              px={4} py="6px"
+            >
+              <Text fontWeight="700" fontSize="sm">{cfg.label}</Text>
+            </Box>
+            <Text fontSize="sm" color="gray.400">
+              GPS Accuracy:{" "}
+              <Box as="span" fontWeight="700" color="#7a69ff">
+                {(result.consistency_score * 100).toFixed(0)}%
+              </Box>
+            </Text>
+          </>
+        )}
+
+        {/* Face mismatch */}
+        {result.type === "faceMismatch" && (
+          <>
+            <Text fontWeight="800" fontSize="xl" color="red.500">Face Mismatch</Text>
+            <Text fontSize="sm" color="gray.500" maxW="300px">
+              Your face does not match the registered profile photo.
+            </Text>
+            <Button
+              onClick={() => window.location.reload()}
+              style={{ background: "linear-gradient(135deg, #7a69ff, #9b8aff)" }}
+              color="white" fontWeight="700" borderRadius="12px"
+              boxShadow="0 4px 14px rgba(122,105,255,0.4)"
+              _hover={{ transform: "translateY(-2px)" }}
+              transition="all 0.2s"
+            >
+              Try Again
+            </Button>
+          </>
+        )}
+
+        {/* Expired */}
+        {result.type === "expired" && (
+          <>
+            <Text fontWeight="800" fontSize="xl" color="orange.500">QR Code Expired</Text>
+            <Text fontSize="sm" color="gray.500">
+              The 15-minute window has closed. Ask your teacher to create a new session.
+            </Text>
+            {result.message && (
+              <Box bg="#f8f7ff" borderRadius="10px" p={3} w="100%">
+                <Text fontSize="xs" color="gray.400" wordBreak="break-word">{result.message}</Text>
+              </Box>
+            )}
+          </>
+        )}
+
+        {/* Error */}
+        {result.type === "error" && (
+          <>
+            <Text fontWeight="800" fontSize="xl" color="red.500">Something went wrong</Text>
+            <Box bg="#fff0f1" border="1px solid rgba(255,107,129,0.2)" borderRadius="10px" p={3} w="100%">
+              <Text fontSize="xs" color="#ff6b81" wordBreak="break-word">{result.errorMsg}</Text>
+            </Box>
+            <Button
+              onClick={() => window.location.reload()}
+              style={{ background: "linear-gradient(135deg, #7a69ff, #9b8aff)" }}
+              color="white" fontWeight="700" borderRadius="12px"
+              boxShadow="0 4px 14px rgba(122,105,255,0.4)"
+            >
+              Try Again
+            </Button>
+          </>
+        )}
+
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          color="gray.400"
+          fontWeight="600"
+          borderRadius="12px"
+          _hover={{ bg: "#f8f7ff", color: "#7a69ff" }}
+        >
+          Back to Dashboard
+        </Button>
+      </VStack>
+    </Card>
+  );
+};
+
+// ─── Main StudentForm ─────────────────────────────────────────────────────────
 
 const StudentForm = ({ togglePopup }) => {
-  //eslint-disable-next-line
-  const [token, setToken] = useState(localStorage.getItem("token") || "");
-  const [image, setImage] = useState({ contentType: "", data: "" });
-  const [photoData, setPhotoData] = useState(""); // To store the captured photo data
+  const [token]          = useState(localStorage.getItem("token") || "");
+  const [image, setImage]          = useState(null);
+  const [photoData, setPhotoData]  = useState("");
   const videoRef = useRef(null);
 
-  // ─────────────────────────────────────────────────────────────
-  // GPS capture state
-  // ─────────────────────────────────────────────────────────────
   const [isCapturingGPS, setIsCapturingGPS] = useState(false);
-  const [gpsProgress, setGpsProgress] = useState(0);
   const gpsReadingsRef = useRef([]);
-  // ─────────────────────────────────────────────────────────────
 
-  // ─────────────────────────────────────────────────────────────
-  // FACE VERIFICATION: State
-  // ─────────────────────────────────────────────────────────────
-  const [faceStatus, setFaceStatus] = useState(null);
+  const [faceStatus, setFaceStatus]             = useState(null);
   const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
 
-  // Result screen — replaces innerHTML anti-pattern
-  const [result, setResult] = useState(null);
-  // result shape: { type: 'success'|'error'|'expired'|'faceMismatch', message, status, consistency_score, errorMsg }
-  // ─────────────────────────────────────────────────────────────
+  const [result, setResult]         = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const constraints = {
-    video: true,
-  };
+  const isBusy = isCapturingGPS || isSubmitting;
+
+  // ── Camera ──────────────────────────────────────────────────────────────────
   const startCamera = () => {
     navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then((stream) => {
-        videoRef.current.srcObject = stream;
-      })
-      .catch((error) => {
-        console.error("Error accessing camera:", error);
-      });
+      .getUserMedia({ video: true })
+      .then((stream) => { videoRef.current.srcObject = stream; })
+      .catch((err) => console.error("Camera error:", err));
   };
-  const stopCamera = () => {
-    const stream = videoRef.current.srcObject;
-    const tracks = stream.getTracks();
 
-    tracks.forEach((track) => track.stop());
-    videoRef.current.srcObject = null;
+  const stopCamera = () => {
+    const stream = videoRef.current?.srcObject;
+    if (stream) { stream.getTracks().forEach((t) => t.stop()); videoRef.current.srcObject = null; }
   };
+
   const capturePhoto = async () => {
     const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
+    canvas.width  = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
-    canvas
-      .getContext("2d")
-      .drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-    const photoDataUrl = canvas.toDataURL("image/png");
-
-    setImage(await fetch(photoDataUrl).then((res) => res.blob()));
-
-    setPhotoData(photoDataUrl);
+    canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
+    const dataUrl = canvas.toDataURL("image/png");
+    setImage(await fetch(dataUrl).then((r) => r.blob()));
+    setPhotoData(dataUrl);
     stopCamera();
   };
-  const ResetCamera = () => {
-    setPhotoData("");
-    startCamera();
-  };
 
-  // ─────────────────────────────────────────────────────────────
-  // GPS: Collect up to 5 readings via watchPosition.
-  // Resolves early once 5 readings are obtained, or after 10s
-  // with however many readings were collected (minimum 1).
-  // ─────────────────────────────────────────────────────────────
-  const captureGPSReadings = () => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject("Geolocation is not supported by this browser.");
-        return;
-      }
+  const resetCamera = () => { setPhotoData(""); setImage(null); startCamera(); };
 
+  // ── GPS ──────────────────────────────────────────────────────────────────────
+  const captureGPSReadings = () =>
+    new Promise((resolve, reject) => {
+      if (!navigator.geolocation) { reject("Geolocation not supported"); return; }
       setIsCapturingGPS(true);
       gpsReadingsRef.current = [];
-      setGpsProgress(0);
-
       let resolved = false;
 
       const watchId = navigator.geolocation.watchPosition(
-        (position) => {
+        (pos) => {
           if (resolved) return;
-
-          const { latitude, longitude } = position.coords;
-          const reading = {
-            latitude: parseFloat(latitude.toFixed(6)),
-            longitude: parseFloat(longitude.toFixed(6)),
-            accuracy: position.coords.accuracy,
+          gpsReadingsRef.current.push({
+            latitude:  parseFloat(pos.coords.latitude.toFixed(6)),
+            longitude: parseFloat(pos.coords.longitude.toFixed(6)),
+            accuracy:  pos.coords.accuracy,
             timestamp: new Date().toISOString(),
-          };
-
-          gpsReadingsRef.current.push(reading);
-          setGpsProgress(gpsReadingsRef.current.length);
-
-          console.log(
-            `📍 GPS Reading ${gpsReadingsRef.current.length}: ${latitude}, ${longitude} (±${position.coords.accuracy.toFixed(1)}m)`
-          );
-
-          // Stop after 5 readings
+          });
           if (gpsReadingsRef.current.length >= 5) {
             resolved = true;
             navigator.geolocation.clearWatch(watchId);
             setIsCapturingGPS(false);
-            console.log("✅ GPS capture complete (5 readings)!");
             resolve([...gpsReadingsRef.current]);
           }
         },
-        (error) => {
+        (err) => {
           if (resolved) return;
           resolved = true;
           navigator.geolocation.clearWatch(watchId);
           setIsCapturingGPS(false);
-          console.error("GPS Error:", error);
-          reject(`Error getting geolocation: ${error.message}`);
+          reject(`GPS error: ${err.message}`);
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
 
-      // 10-second hard cap — resolve with whatever we have (≥1 reading)
+      // 10s hard cap
       setTimeout(() => {
         if (resolved) return;
         resolved = true;
         navigator.geolocation.clearWatch(watchId);
         setIsCapturingGPS(false);
-
-        if (gpsReadingsRef.current.length > 0) {
-          console.warn(
-            `⚠️ GPS timeout — using ${gpsReadingsRef.current.length} reading(s)`
-          );
-          resolve([...gpsReadingsRef.current]);
-        } else {
-          reject("GPS timeout: no readings received");
-        }
+        if (gpsReadingsRef.current.length > 0) resolve([...gpsReadingsRef.current]);
+        else reject("GPS timeout: no readings received");
       }, 10000);
     });
-  };
-  // ─────────────────────────────────────────────────────────────
 
-  // ─────────────────────────────────────────────────────────────
-  // FACE VERIFICATION: Load models & compare live photo vs registered profile
-  // ─────────────────────────────────────────────────────────────
+  // ── Face verification ────────────────────────────────────────────────────────
   const verifyFace = async (livePhotoDataUrl) => {
     setFaceStatus("verifying");
     try {
-      // Load models only once
       if (!faceModelsLoaded) {
-        console.log("🧠 Loading face-api.js models...");
-        const MODEL_URL = "/models";
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
+          faceapi.nets.faceLandmark68TinyNet.loadFromUri("/models"),
+          faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
         ]);
         setFaceModelsLoaded(true);
-        console.log("✅ Face models loaded");
       }
-
-      // Fetch the stored profile photo URL from backend
       const profileRes = await axios.get("http://localhost:5000/users/profile_photo", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const profilePhotoUrl = profileRes.data.profile_photo;
+      if (!profilePhotoUrl) { setFaceStatus("passed"); return true; }
 
-      if (!profilePhotoUrl) {
-        console.warn("⚠️ No profile photo found — skipping face check");
-        setFaceStatus("passed"); // Graceful fallback if photo not set at signup
-        return true;
-      }
-
-      // Load both images as HTML Image elements
-      const loadImage = (src) =>
+      const loadImg = (src) =>
         new Promise((res, rej) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.onload  = () => res(img);
-          img.onerror = () => rej(new Error("Failed to load image: " + src));
+          img.onerror = () => rej(new Error("Failed to load: " + src));
           img.src = src;
         });
 
-      console.log("📸 Computing face descriptors...");
       const opts = new faceapi.TinyFaceDetectorOptions();
-
-      const [liveImg, profileImg] = await Promise.all([
-        loadImage(livePhotoDataUrl),
-        loadImage(profilePhotoUrl),
-      ]);
-
-      const [liveResult, profileResult] = await Promise.all([
+      const [liveImg, profileImg] = await Promise.all([loadImg(livePhotoDataUrl), loadImg(profilePhotoUrl)]);
+      const [liveDet, profDet]    = await Promise.all([
         faceapi.detectSingleFace(liveImg, opts).withFaceLandmarks(true).withFaceDescriptor(),
         faceapi.detectSingleFace(profileImg, opts).withFaceLandmarks(true).withFaceDescriptor(),
       ]);
 
-      if (!liveResult) {
-        console.warn("⚠️ No face detected in live photo");
-        setFaceStatus("failed");
-        return false;
-      }
-      if (!profileResult) {
-        console.warn("⚠️ No face detected in profile photo — skipping check");
-        setFaceStatus("passed"); // Fallback: profile photo unusable
-        return true;
-      }
+      if (!liveDet) { setFaceStatus("failed"); return false; }
+      if (!profDet) { setFaceStatus("passed"); return true; }
 
-      // Euclidean distance: < 0.5 = same person, > 0.5 = different person
-      const distance = faceapi.euclideanDistance(liveResult.descriptor, profileResult.descriptor);
-      console.log(`📏 Face distance: ${distance.toFixed(3)} (threshold: 0.5)`);
-
-      if (distance < 0.5) {
-        console.log("✅ Face match!");
-        setFaceStatus("passed");
-        return true;
-      } else {
-        console.warn("❌ Face mismatch!");
-        setFaceStatus("failed");
-        return false;
-      }
+      const dist = faceapi.euclideanDistance(liveDet.descriptor, profDet.descriptor);
+      const passed = dist < 0.5;
+      setFaceStatus(passed ? "passed" : "failed");
+      return passed;
     } catch (err) {
-      console.error("❌ Face verification error:", err);
-      setFaceStatus("passed"); // Fail-open: don't block if error occurs
+      console.error("Face verification error:", err);
+      setFaceStatus("passed"); // fail-open
       return true;
     }
   };
-  // ─────────────────────────────────────────────────────────────
 
-  const AttendSession = async (e) => {
+  // ── Submit ────────────────────────────────────────────────────────────────────
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    let regno = e.target.regno.value;
+    const regno = e.target.regno.value.trim();
+    if (!regno)     { alert("Please enter your registration number."); return; }
+    if (!photoData) { alert("Please capture your photo first.");        return; }
 
-    if (regno.length === 0) {
-      alert("Please enter registration number");
-      return;
-    }
-
-    // Check photo is captured
-    if (!photoData) {
-      alert("Please capture your photo first");
-      return;
-    }
-
+    setIsSubmitting(true);
     try {
-      // ─────────────────────────────────────────────────────────────
-      // FACE VERIFICATION: Check before anything else
-      // ─────────────────────────────────────────────────────────────
-      console.log("👀 Running face verification...");
       const faceMatch = await verifyFace(photoData);
-      if (!faceMatch) {
-        setResult({ type: "faceMismatch" });
-        return;
-      }
-      console.log("✅ Face verified! Proceeding...");
-      // ─────────────────────────────────────────────────────────────
+      if (!faceMatch) { setResult({ type: "faceMismatch" }); return; }
 
-      // Get user IP address
       axios.defaults.withCredentials = false;
-      const res = await axios.get("https://api64.ipify.org?format=json");
+      const { data: ipData } = await axios.get("https://api64.ipify.org?format=json");
       axios.defaults.withCredentials = true;
-      let IP = res.data.ip;
 
-      // ─────────────────────────────────────────────────────────────
-      // GPS: Capture readings (up to 5, minimum 1)
-      // ─────────────────────────────────────────────────────────────
-      console.log("🚀 Starting GPS capture...");
       const gpsReadingsArray = await captureGPSReadings();
-      console.log(`✅ Captured ${gpsReadingsArray.length} GPS reading(s)`);
-      // ─────────────────────────────────────────────────────────────
 
-      // Use FormData for multipart/form-data upload
       const formData = new FormData();
-      formData.append("token", token);
-      formData.append("regno", regno);
-      formData.append("session_id", localStorage.getItem("session_id"));
+      formData.append("token",         token);
+      formData.append("regno",         regno);
+      formData.append("session_id",    localStorage.getItem("session_id"));
       formData.append("teacher_email", localStorage.getItem("teacher_email"));
-      formData.append("IP", IP);
-      formData.append("date", new Date().toISOString().split("T")[0]);
-      formData.append("gps_readings", JSON.stringify(gpsReadingsArray));
+      formData.append("IP",            ipData.ip);
+      formData.append("date",          new Date().toISOString().split("T")[0]);
+      formData.append("gps_readings",  JSON.stringify(gpsReadingsArray));
       formData.append("student_email", localStorage.getItem("email"));
+      if (image instanceof Blob) formData.append("image", image, "photo.png");
 
-      // Append the image blob with field name "image" (must match multer's field name)
-      if (image instanceof Blob) {
-        formData.append("image", image, "photo.png");
-      }
-
-      console.log("📤 Sending attendance...");
-      const response = await axios.post(
+      const { data } = await axios.post(
         "http://localhost:5000/sessions/attend_session",
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
-
-      const { status, consistency_score } = response.data;
-      setResult({ type: "success", message: response.data.message, status, consistency_score });
+      setResult({ type: "success", message: data.message, status: data.status, consistency_score: data.consistency_score });
     } catch (err) {
-      console.error("❌ Attendance Error:", err);
-
-      // ── QR Expired (HTTP 410) ─────────────────────────────────────
+      console.error("Attendance error:", err);
       if (err.response?.status === 410 || err.response?.data?.expired) {
-        setResult({ type: "expired", message: err.response?.data?.message || "Please ask your teacher to create a new session." });
+        setResult({ type: "expired", message: err.response?.data?.message });
         return;
       }
-
       let errorMsg = "Error marking attendance: ";
-      if (err.response?.status === 400) {
-        errorMsg += err.response.data?.message || "Bad request (check console)";
-      } else if (err.response?.status === 404) {
-        errorMsg += "Session not found";
-      } else {
-        errorMsg += err.message;
-      }
-      console.error("Full error response:", err.response?.data);
+      if      (err.response?.status === 400) errorMsg += err.response.data?.message || "Bad request";
+      else if (err.response?.status === 404) errorMsg += "Session not found";
+      else                                   errorMsg += err.message;
       setResult({ type: "error", errorMsg });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // ── Result screen ─────────────────────────────────────────────────────────────
+  if (result) {
+    return <ResultScreen result={result} onClose={() => togglePopup("close")} />;
+  }
+
+  // ── Main form ─────────────────────────────────────────────────────────────────
   return (
-    <div className="form-popup">
-      <button onClick={togglePopup} disabled={isCapturingGPS}>
-        <strong>X</strong>
-      </button>
-      <div className="form-popup-inner">
+    <Card>
+      {/* Header */}
+      <Flex align="center" justify="space-between" px={5} py={4} borderBottom="1px solid rgba(122,105,255,0.1)">
+        <HStack gap={3}>
+          <Flex
+            w="36px" h="36px"
+            borderRadius="10px"
+            align="center" justify="center"
+            style={{ background: "linear-gradient(135deg, #7a69ff, #9b8aff)" }}
+            boxShadow="0 4px 10px rgba(122,105,255,0.3)"
+          >
+            <MdFaceRetouchingNatural size={18} color="white" />
+          </Flex>
+          <Box>
+            <Text fontWeight="800" fontSize="sm" color="gray.800" lineHeight={1.2}>Mark Attendance</Text>
+            <Text fontSize="10px" color="gray.400" mt="1px">Complete both steps below</Text>
+          </Box>
+        </HStack>
 
-        {/* ── RESULT SCREEN: shown after submission ── */}
-        {result ? (
-          <div style={{ textAlign: "center", padding: "24px" }}>
-            {result.type === "success" && (() => {
-              const emoji = { VERIFIED: "✅", SUSPICIOUS: "⚠️", OUTSIDE_GEOFENCE: "❌" }[result.status] || "❓";
-              return (
-                <>
-                  <div style={{ fontSize: 48, marginBottom: 12 }}>{emoji}</div>
-                  <h2>{result.message}</h2>
-                  <p style={{ fontSize: 14, color: "#6b7280" }}>
-                    Status: <strong>{result.status}</strong><br />
-                    Accuracy: <strong>{(result.consistency_score * 100).toFixed(0)}%</strong>
-                  </p>
-                </>
-              );
-            })()}
-            {result.type === "faceMismatch" && (
-              <>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
-                <h2 style={{ color: "#b91c1c" }}>Face Mismatch</h2>
-                <p style={{ fontSize: 14, color: "#6b7280" }}>
-                  Your face does not match the registered profile photo.
-                  Please ensure you are the registered student.
-                </p>
-                <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", marginTop: 10 }}>
-                  Try Again
-                </button>
-              </>
-            )}
-            {result.type === "expired" && (
-              <>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>⏰</div>
-                <h2 style={{ color: "#b91c1c" }}>QR Code Expired</h2>
-                <p style={{ fontSize: 14, color: "#6b7280" }}>
-                  The 15-minute attendance window for this session has closed.
-                </p>
-                <p style={{ fontSize: 12, color: "#9ca3af", background: "#f3f4f6", padding: 10, borderRadius: 6, wordBreak: "break-word" }}>
-                  {result.message}
-                </p>
-              </>
-            )}
-            {result.type === "error" && (
-              <>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
-                <h2>Error</h2>
-                <p style={{ fontSize: 13, color: "#dc2626", wordBreak: "break-word" }}>
-                  {result.errorMsg}
-                </p>
-                <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", marginTop: 10 }}>
-                  Try Again
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
-          <>
-            <h5>Enter Your Details</h5>
+        <Box
+          as="button"
+          w="32px" h="32px"
+          borderRadius="8px"
+          display="flex" alignItems="center" justifyContent="center"
+          color="gray.400"
+          bg="transparent"
+          border="none"
+          cursor={isBusy ? "not-allowed" : "pointer"}
+          onClick={() => !isBusy && togglePopup("close")}
+          style={{ transition: "all 0.15s" }}
+          onMouseEnter={(e) => { if (!isBusy) { e.currentTarget.style.background = "#fff0f1"; e.currentTarget.style.color = "#ff6b81"; } }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9ca3af"; }}
+        >
+          <MdClose size={18} />
+        </Box>
+      </Flex>
 
-            {/* ── FACE VERIFICATION STATUS BANNER ── */}
-            {faceStatus === "verifying" && (
-              <div style={{ background: "#eff6ff", border: "2px solid #3b82f6", borderRadius: 8, padding: "12px 16px", marginBottom: 12, textAlign: "center", fontSize: 14, color: "#1d4ed8" }}>
-                🧠 Verifying your identity... please wait
-              </div>
-            )}
-            {faceStatus === "passed" && (
-              <div style={{ background: "#d1fae5", border: "2px solid #10b981", borderRadius: 8, padding: "12px 16px", marginBottom: 12, textAlign: "center", fontSize: 14, color: "#065f46" }}>
-                ✅ Identity verified!
-              </div>
-            )}
-            {faceStatus === "failed" && (
-              <div style={{ background: "#fee2e2", border: "2px solid #ef4444", borderRadius: 8, padding: "12px 16px", marginBottom: 12, textAlign: "center", fontSize: 14, color: "#991b1b" }}>
-                ❌ Face mismatch — attendance blocked
-              </div>
-            )}
+      {/* Body */}
+      <VStack align="stretch" gap={0} p={5}>
+        <FaceBanner status={faceStatus} />
+        <GpsBanner isCapturing={isCapturingGPS} />
 
-            {/* ── GPS CAPTURE PROGRESS ── */}
-            {isCapturingGPS && (
-              <div
-                style={{
-                  background: "#f0f9ff",
-                  border: "2px solid #3b82f6",
-                  borderRadius: 8,
-                  padding: "16px",
-                  marginBottom: 16,
-                  textAlign: "center",
-                }}
-              >
-                <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "#1f2937" }}>
-                  📍 Capturing GPS Locations...
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: 6,
-                    marginBottom: 8,
-                  }}
-                >
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 4,
-                        background: gpsProgress >= i ? "#10b981" : "#e5e7eb",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: gpsProgress >= i ? "#fff" : "#9ca3af",
-                        fontWeight: 700,
-                        fontSize: 12,
-                      }}
-                    >
-                      {i}
-                    </div>
-                  ))}
-                </div>
-                <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
-                  Reading {gpsProgress} of 5 (usually done in a few seconds)
-                </p>
-              </div>
-            )}
+        <CameraSection
+          videoRef={videoRef}
+          photoData={photoData}
+          onStart={startCamera}
+          onCapture={capturePhoto}
+          onReset={resetCamera}
+          disabled={isBusy}
+        />
 
-            {!photoData && <video ref={videoRef} width={300} autoPlay={true} />}
-            {photoData && <img src={photoData} width={300} alt="Captured" />}
-            <div className="cam-btn">
-              <button onClick={startCamera} disabled={isCapturingGPS}>
-                Start Camera
-              </button>
-              <button onClick={capturePhoto} disabled={isCapturingGPS}>
-                Capture
-              </button>
-              <button onClick={ResetCamera} disabled={isCapturingGPS}>
-                Reset
-              </button>
-            </div>
-
-            <form onSubmit={AttendSession}>
-              <input
-                type="text"
-                name="regno"
-                placeholder="RegNo"
-                autoComplete="off"
-                disabled={isCapturingGPS}
-              />
-              <button
-                type="submit"
-                disabled={isCapturingGPS}
-                style={{
-                  opacity: isCapturingGPS ? 0.5 : 1,
-                  cursor: isCapturingGPS ? "not-allowed" : "pointer",
-                }}
-              >
-                {isCapturingGPS ? "Capturing GPS..." : "Done"}
-              </button>
-            </form>
-          </>
-        )}
-        {/* ── end result ternary ── */}
-
-      </div>
-    </div>
+        <SubmitSection
+          onSubmit={handleSubmit}
+          disabled={isBusy}
+          isCapturingGPS={isCapturingGPS}
+          isSubmitting={isSubmitting}
+        />
+      </VStack>
+    </Card>
   );
 };
 
