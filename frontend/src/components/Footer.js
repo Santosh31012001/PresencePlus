@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Flex, Text, HStack, Link as ChakraLink } from "@chakra-ui/react";
+import { Box, Flex, Text, HStack } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
