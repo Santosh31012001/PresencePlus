@@ -1,14 +1,14 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Flex, Text, SimpleGrid, Badge,
+  Box, Flex, Text, SimpleGrid,
   Spinner, HStack, VStack, Button, Separator,
 } from "@chakra-ui/react";
 import {
   MdVideoCall, MdCalendarToday, MdAccessTime,
   MdAdd, MdSearch, MdGpsFixed, MdPeople, MdCheckCircle,
-  MdWarning, MdArrowForward, MdDelete,
+  MdWarning, MdDelete,
 } from "react-icons/md";
 import SessionDetails from "./SessionDetails";
 import NewSession from "./NewSession";

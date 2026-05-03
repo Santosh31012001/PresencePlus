@@ -3,7 +3,7 @@ import {
   Box, Flex, Text, VStack, SimpleGrid, Separator,
 } from "@chakra-ui/react";
 import {
-  MdSettings, MdGpsFixed, MdSecurity, MdPalette, MdInfo,
+  MdGpsFixed, MdSecurity, MdPalette, MdInfo,
 } from "react-icons/md";
 
 const SettingRow = ({ label, description, children }) => (

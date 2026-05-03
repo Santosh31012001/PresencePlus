@@ -17,7 +17,6 @@ import {
 import {
   MdVideoCall,
   MdPeople,
-  MdCheckCircle,
   MdAdd,
   MdCalendarToday,
   MdAccessTime,

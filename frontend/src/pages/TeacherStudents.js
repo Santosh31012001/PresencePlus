@@ -5,7 +5,7 @@ import {
   Box, Flex, Text, VStack, HStack, Spinner, Badge, Separator, SimpleGrid,
 } from "@chakra-ui/react";
 import {
-  MdPeople, MdPerson, MdVideoCall, MdSearch, MdCheckCircle, MdWarning,
+  MdPeople, MdPerson, MdSearch,
   MdMap, MdKeyboardArrowDown, MdKeyboardArrowUp,
 } from "react-icons/md";
 import StudentMapModal from "../components/StudentMapModal";
