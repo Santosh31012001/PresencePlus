@@ -56,7 +56,7 @@ mongoose
 
 // Routes
 app.get("/", (req, res) => {
-  res.send("Welcome to Atendo Backend");
+  res.send("Welcome to GeoSential Backend");
 });
 app.use("/users", userRoutes);
 app.use("/sessions", SessionRoutes);

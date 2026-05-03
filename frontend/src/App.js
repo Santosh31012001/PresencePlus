@@ -5,7 +5,6 @@ import {
   Login,
   Logout,
   Register,
-  NewSession,
   StudentDashboard,
   ForgotPassword,
 } from "./pages/Index";
