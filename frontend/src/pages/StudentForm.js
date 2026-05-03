@@ -4,7 +4,7 @@ import * as faceapi from "face-api.js";
 import { Box, Flex, Text, Button, VStack, HStack, Spinner } from "@chakra-ui/react";
 import {
   MdClose, MdCameraAlt, MdFlipCameraAndroid,
-  MdCheckCircle, MdWarning, MdGpsFixed, MdSend,
+  MdCheckCircle, MdWarning, MdSend,
   MdFaceRetouchingNatural,
 } from "react-icons/md";
 

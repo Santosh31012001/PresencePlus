@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Box, Flex, Text, SimpleGrid, VStack, HStack, Badge,
+  Box, Flex, Text, SimpleGrid, VStack, HStack,
 } from "@chakra-ui/react";
 import {
   MdGpsFixed, MdFaceRetouchingNatural, MdQrCode2,

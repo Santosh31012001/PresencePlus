@@ -92,9 +92,9 @@ const ForgotPassword = () => {
 
   useEffect(() => {
     if (token !== "") {
-      navigate("/dashboard");
+      navigate("/login");
     }
-  });
+  }, [token, navigate]);
 
   return (
     <div className="register-main">

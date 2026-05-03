@@ -106,7 +106,6 @@ const SessionDetails = (props) => {
 
   const sessionDate = currentSession.date?.split("T")[0] || "—";
   const sessionTime = currentSession.time || "—";
-  const sessionDuration = currentSession.duration || "—";
 
   /* ─────────────────────────────── RENDER ─────────────────────────────── */
   return (

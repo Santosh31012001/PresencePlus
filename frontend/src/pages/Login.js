@@ -105,7 +105,7 @@ const Login = () => {
         }
       }
     }
-  }, [token]);
+  }, [token, navigate]);
 
   return (
     <div className="login-main">
