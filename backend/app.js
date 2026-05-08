@@ -17,9 +17,15 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: function (origin, callback) {
-      if (!origin || origin === CLIENT_URL || origin.endsWith(".vercel.app")) {
+      console.log("Incoming CORS Origin:", origin);
+      const isAllowed = !origin || 
+                       origin === CLIENT_URL || 
+                       origin.includes("vercel.app") || 
+                       origin.includes("localhost");
+      if (isAllowed) {
         callback(null, true);
       } else {
+        console.error("CORS Blocked for origin:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -41,7 +47,11 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || origin === CLIENT_URL || origin.endsWith(".vercel.app")) {
+      const isAllowed = !origin || 
+                       origin === CLIENT_URL || 
+                       origin.includes("vercel.app") || 
+                       origin.includes("localhost");
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
