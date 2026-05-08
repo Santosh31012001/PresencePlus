@@ -15,7 +15,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "https://presence-plus.vercel.app/",
+    origin: process.env.CLIENT_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -33,8 +33,7 @@ app.use((req, res, next) => {
 // Middleware
 app.use(
   cors({
-    // origin: process.env.CLIENT_URL,
-    origin: "https://presence-plus.vercel.app/",
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );

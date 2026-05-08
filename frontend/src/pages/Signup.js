@@ -107,7 +107,7 @@ const Signup = () => {
     }
     setSlide(2);
     try {
-      const res = await axios.post("http://localhost:5000/users/sendmail", { email: form.email });
+      const res = await axios.post(`${process.env.REACT_APP_API_URL}/users/sendmail`, { email: form.email });
       setSavedOtp(String(res.data.otp));
     } catch (err) { console.log(err); }
   };
@@ -163,7 +163,7 @@ const Signup = () => {
     }
 
     try {
-      await axios.post("http://localhost:5000/users/signup", formData, {
+      await axios.post(`${process.env.REACT_APP_API_URL}/users/signup`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       navigate("/login");
