@@ -6,6 +6,11 @@ import reportWebVitals from "./reportWebVitals";
 import { ChakraProvider, Theme } from "@chakra-ui/react";
 import { Toaster } from "react-hot-toast";
 import { system } from "./theme";
+import axios from "axios";
+
+// Global API Configuration
+axios.defaults.baseURL = process.env.REACT_APP_API_URL?.replace(/\/$/, "");
+axios.defaults.withCredentials = true;
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

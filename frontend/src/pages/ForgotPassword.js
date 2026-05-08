@@ -30,7 +30,7 @@ const ForgotPassword = () => {
       document.querySelector(".page1").style.display = "none";
       document.querySelector(".page2").style.display = "block";
       await axios
-        .post(`${process.env.REACT_APP_API_URL}/users/sendmail`, {
+        .post("/users/sendmail", {
           email: email,
         })
         .then((res) => {
@@ -75,7 +75,7 @@ const ForgotPassword = () => {
         };
         try {
           await axios.post(
-            `${process.env.REACT_APP_API_URL}/users/forgotpassword`,
+            "/users/forgotpassword",
             formData
           );
           navigate("/login");

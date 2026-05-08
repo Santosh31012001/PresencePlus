@@ -9,7 +9,6 @@ import see from "../assets/see.png";
 import hide from "../assets/hide.png";
 
 const queryParameters = new URLSearchParams(window.location.search);
-axios.defaults.withCredentials = true;
 
 const Login = () => {
   // eslint-disable-next-line
@@ -45,7 +44,7 @@ const Login = () => {
       };
       try {
         const response = await axios.post(
-          `${process.env.REACT_APP_API_URL}/users/signin`,
+          "/users/signin",
           formData
         );
         let user = response.data.user;
