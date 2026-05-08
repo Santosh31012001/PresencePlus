@@ -16,19 +16,7 @@ const CLIENT_URL = process.env.CLIENT_URL?.replace(/\/$/, "");
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: function (origin, callback) {
-      console.log("Incoming CORS Origin:", origin);
-      const isAllowed = !origin || 
-                       origin === CLIENT_URL || 
-                       origin.includes("vercel.app") || 
-                       origin.includes("localhost");
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.error("CORS Blocked for origin:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: CLIENT_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -46,17 +34,7 @@ app.use((req, res, next) => {
 // Middleware
 app.use(
   cors({
-    origin: function (origin, callback) {
-      const isAllowed = !origin || 
-                       origin === CLIENT_URL || 
-                       origin.includes("vercel.app") || 
-                       origin.includes("localhost");
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: CLIENT_URL,
     credentials: true,
   })
 );

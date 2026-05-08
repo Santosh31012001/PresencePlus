@@ -13,14 +13,11 @@ export default class Mailer {
   // ── Generic plain-text / HTML mailer ──────────────────────────────
   static async sendMail(to, subject, text, html = null) {
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false, // Use TLS
+      service: "gmail",
       auth: {
         user: process.env.EMAIL,
         pass: process.env.PASSWORD,
       },
-      connectionTimeout: 10000, // 10 seconds
     });
 
     const mailOptions = {
