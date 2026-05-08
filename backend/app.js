@@ -12,10 +12,11 @@ import { Server } from "socket.io";
 
 // Initialize the app
 const app = express();
+const CLIENT_URL = process.env.CLIENT_URL?.replace(/\/$/, "");
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: CLIENT_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -33,7 +34,7 @@ app.use((req, res, next) => {
 // Middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: CLIENT_URL,
     credentials: true,
   })
 );

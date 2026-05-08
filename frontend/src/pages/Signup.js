@@ -10,6 +10,7 @@ import hide from "../assets/hide.png";
 
 const Signup = () => {
   const navigate = useNavigate();
+const API_URL = process.env.REACT_APP_API_URL?.replace(/\/$/, "");
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   const token = localStorage.getItem("token") || "";
@@ -107,7 +108,7 @@ const Signup = () => {
     }
     setSlide(2);
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/users/sendmail`, { email: form.email });
+      const res = await axios.post(`${API_URL}/users/sendmail`, { email: form.email });
       setSavedOtp(String(res.data.otp));
     } catch (err) { console.log(err); }
   };
@@ -163,7 +164,7 @@ const Signup = () => {
     }
 
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/users/signup`, formData, {
+      await axios.post(`${API_URL}/users/signup`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       navigate("/login");
