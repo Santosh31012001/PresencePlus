@@ -16,7 +16,13 @@ const CLIENT_URL = process.env.CLIENT_URL?.replace(/\/$/, "");
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: function (origin, callback) {
+      if (!origin || origin === CLIENT_URL || origin.endsWith(".vercel.app")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -34,7 +40,13 @@ app.use((req, res, next) => {
 // Middleware
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: function (origin, callback) {
+      if (!origin || origin === CLIENT_URL || origin.endsWith(".vercel.app")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
