@@ -177,35 +177,35 @@ async function EditUserDetails(req, res) {
 }
 
 // ─── Send OTP Mail ────────────────────────────────────────────────────────────
-function SendMail(req, res) {
+async function SendMail(req, res) {
   const { email } = req.body;
   const otp = Math.floor(100000 + Math.random() * 900000);
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL/TLS
+    port: 587,
+    secure: false, // use TLS
     auth: {
       user: process.env.EMAIL,
       pass: process.env.PASSWORD,
     },
-    timeout: 10000, // 10 seconds timeout
+    connectionTimeout: 10000, // 10 seconds
   });
 
   const mailOptions = {
-    from: process.env.EMAIL,
+    from: `"PresencePlus" <${process.env.EMAIL}>`,
     to: email,
     subject: "OTP for registration",
     text: `Your OTP is ${otp}`,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      res.status(400).json({ message: error.message });
-    } else {
-      console.log("Email sent: " + info.response);
-      res.status(200).json({ message: "OTP sent successfully", otp });
-    }
-  });
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent: " + info.response);
+    res.status(200).json({ message: "OTP sent successfully", otp });
+  } catch (error) {
+    console.error("SendMail Error:", error);
+    res.status(400).json({ message: error.message });
+  }
 }
 
 const UserController = {
