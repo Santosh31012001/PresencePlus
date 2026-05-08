@@ -4,8 +4,8 @@ import nodemailer from "nodemailer";
 
 // Status badge styles
 const STATUS_STYLES = {
-  VERIFIED:         { bg: "#d1fae5", color: "#065f46", label: "✅ VERIFIED" },
-  SUSPICIOUS:       { bg: "#fef9c3", color: "#713f12", label: "⚠️ SUSPICIOUS" },
+  VERIFIED: { bg: "#d1fae5", color: "#065f46", label: "✅ VERIFIED" },
+  SUSPICIOUS: { bg: "#fef9c3", color: "#713f12", label: "⚠️ SUSPICIOUS" },
   OUTSIDE_GEOFENCE: { bg: "#fee2e2", color: "#7f1d1d", label: "❌ OUTSIDE GEOFENCE" },
 };
 
@@ -13,11 +13,14 @@ export default class Mailer {
   // ── Generic plain-text / HTML mailer ──────────────────────────────
   static async sendMail(to, subject, text, html = null) {
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // Use SSL/TLS
       auth: {
         user: process.env.EMAIL,
         pass: process.env.PASSWORD,
       },
+      timeout: 10000, // 10 seconds timeout
     });
 
     const mailOptions = {
@@ -51,8 +54,8 @@ export default class Mailer {
     const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
     const formattedDate = sessionDate
       ? new Date(sessionDate).toLocaleDateString("en-IN", {
-          day: "numeric", month: "long", year: "numeric",
-        })
+        day: "numeric", month: "long", year: "numeric",
+      })
       : "N/A";
 
     const html = `
