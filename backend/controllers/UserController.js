@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 import { Student } from "../model/Student.js";
 import { Teacher } from "../model/Teacher.js";
 import JWT from "../middleware/JWT.js";
-import uploadImage from "../middleware/Cloudinary.js";
+import uploadImage from "../middleware/cloudinary.js";
 
 // ─── Login ───────────────────────────────────────────────────────────────────
 async function Login(req, res) {

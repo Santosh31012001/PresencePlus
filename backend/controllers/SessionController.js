@@ -3,7 +3,7 @@ dotenv.config();
 import querystring from "querystring";
 import { Teacher } from "../model/Teacher.js";
 import { Student } from "../model/Student.js";
-import uploadImage from "../middleware/Cloudinary.js";
+import uploadImage from "../middleware/cloudinary.js";
 import Mailer from "../middleware/Mailer.js";
 
 function getQR(session_id, email) {

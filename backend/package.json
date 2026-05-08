@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon apps.js"
+    "start": "node app.js"
   },
   "keywords": [],
   "author": "Dhruvil Patel & Rahul Agnihotri",
