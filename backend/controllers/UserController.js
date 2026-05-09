@@ -181,11 +181,17 @@ function SendMail(req, res) {
   const { email } = req.body;
   const otp = Math.floor(100000 + Math.random() * 900000);
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // Use SSL/TLS
     auth: {
       user: process.env.EMAIL,
       pass: process.env.PASSWORD,
     },
+    // Prevent timeouts on Render
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 
   const mailOptions = {
@@ -197,6 +203,7 @@ function SendMail(req, res) {
 
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
+      console.error("OTP Mail Error:", error);
       res.status(400).json({ message: error.message });
     } else {
       console.log("Email sent: " + info.response);
