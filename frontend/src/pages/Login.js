@@ -36,8 +36,8 @@ const Login = () => {
     let password = e.target.password.value;
 
     if (email.length > 0 && password.length > 0) {
-      password = computeHash(password);
-      password = computeHash(email + password);
+      // password = computeHash(password);
+      // password = computeHash(email + password);
       const formData = {
         email,
         password,
@@ -60,9 +60,9 @@ const Login = () => {
           if (session_id !== "" && teacher !== "") {
             navigate(
               "/student-dashboard?session_id=" +
-                session_id +
-                "&email=" +
-                teacher
+              session_id +
+              "&email=" +
+              teacher
             );
           } else {
             navigate("/student-dashboard");
