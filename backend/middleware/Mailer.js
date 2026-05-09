@@ -8,57 +8,72 @@ const STATUS_STYLES = {
   SUSPICIOUS: { bg: "#fef9c3", color: "#713f12", label: "⚠️ SUSPICIOUS" },
   OUTSIDE_GEOFENCE: { bg: "#fee2e2", color: "#7f1d1d", label: "❌ OUTSIDE GEOFENCE" },
 };
-
 export default class Mailer {
-  // ── Generic plain-text / HTML mailer ──────────────────────────────
   static async sendMail(to, subject, text, html = null) {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true, // Use SSL/TLS
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD,
-      },
-      timeout: 10000, // 10 seconds timeout
-    });
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.PASSWORD,
+    },
 
-    const mailOptions = {
-      from: `"PresencePlus" <${process.env.EMAIL}>`,
-      to,
-      subject,
-      text,
-      ...(html && { html }),
+    // Timeout settings
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
+
+  const mailOptions = {
+    from: `"PresencePlus" <${process.env.EMAIL}>`,
+    to,
+    subject,
+    text,
+    ...(html && { html }),
+  };
+
+  try {
+    // Verify SMTP connection
+    await transporter.verify();
+    console.log("SMTP server connected");
+
+    // Send mail
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Mail sent:", info.response);
+
+    return info;
+  } catch (error) {
+    console.error("Mailer error:", error);
+
+    return {
+      success: false,
+      message: error.message,
     };
-
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      return info;
-    } catch (error) {
-      console.error("Mailer error:", error);
-      return false;
-    }
   }
+}
+
 
   // ── Attendance confirmation email ─────────────────────────────────
   static async sendAttendanceConfirmation({
-    studentEmail,
-    studentRegno,
-    sessionName,
-    sessionDate,
-    sessionTime,
-    teacherEmail,
-    status,
-    distance,
-  }) {
-    const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
-    const formattedDate = sessionDate
-      ? new Date(sessionDate).toLocaleDateString("en-IN", {
-        day: "numeric", month: "long", year: "numeric",
-      })
-      : "N/A";
+  studentEmail,
+  studentRegno,
+  sessionName,
+  sessionDate,
+  sessionTime,
+  teacherEmail,
+  status,
+  distance,
+}) {
+  const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
+  const formattedDate = sessionDate
+    ? new Date(sessionDate).toLocaleDateString("en-IN", {
+      day: "numeric", month: "long", year: "numeric",
+    })
+    : "N/A";
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -147,14 +162,14 @@ export default class Mailer {
 </html>
     `.trim();
 
-    const text = `Attendance Confirmed\n\nHi ${studentRegno || studentEmail},\n\nYour attendance has been recorded.\n\nSession: ${sessionName}\nDate: ${formattedDate}\nTime: ${sessionTime}\nDistance: ${distance}m\nTeacher: ${teacherEmail}\nStatus: ${status}\n\n— PresencePlus`;
+  const text = `Attendance Confirmed\n\nHi ${studentRegno || studentEmail},\n\nYour attendance has been recorded.\n\nSession: ${sessionName}\nDate: ${formattedDate}\nTime: ${sessionTime}\nDistance: ${distance}m\nTeacher: ${teacherEmail}\nStatus: ${status}\n\n— PresencePlus`;
 
-    return Mailer.sendMail(
-      studentEmail,
-      `✅ Attendance Confirmed — ${sessionName}`,
-      text,
-      html
-    );
-  }
+  return Mailer.sendMail(
+    studentEmail,
+    `✅ Attendance Confirmed — ${sessionName}`,
+    text,
+    html
+  );
+}
 }
 
