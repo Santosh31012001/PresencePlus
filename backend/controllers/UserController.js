@@ -1,10 +1,10 @@
 import dotenv from "dotenv";
 dotenv.config();
-import nodemailer from "nodemailer";
 import { Student } from "../model/Student.js";
 import { Teacher } from "../model/Teacher.js";
 import JWT from "../middleware/JWT.js";
 import uploadImage from "../middleware/cloudinary.js";
+import Mailer from "../middleware/Mailer.js";
 
 // ─── Login ───────────────────────────────────────────────────────────────────
 async function Login(req, res) {
@@ -124,9 +124,9 @@ async function Signup(req, res) {
       error: err.message,
       details: err.errors
         ? Object.keys(err.errors).map((key) => ({
-            field: key,
-            message: err.errors[key].message,
-          }))
+          field: key,
+          message: err.errors[key].message,
+        }))
         : undefined,
     });
   }
@@ -177,39 +177,37 @@ async function EditUserDetails(req, res) {
 }
 
 // ─── Send OTP Mail ────────────────────────────────────────────────────────────
-function SendMail(req, res) {
+async function SendMail(req, res) {
   const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000);
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // Use SSL/TLS
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.PASSWORD,
-    },
-    // Prevent timeouts on Render
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-  });
 
-  const mailOptions = {
-    from: process.env.EMAIL,
-    to: email,
-    subject: "OTP for registration",
-    text: `Your OTP is ${otp}`,
-  };
+  console.log("📧 Sending OTP to:", email);
+  console.log("EMAIL env set:", !!process.env.EMAIL);
+  console.log("PASSWORD env set:", !!process.env.PASSWORD);
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error("OTP Mail Error:", error);
-      res.status(400).json({ message: error.message });
-    } else {
-      console.log("Email sent: " + info.response);
-      res.status(200).json({ message: "OTP sent successfully", otp });
+  try {
+    const result = await Mailer.sendMail(
+      email,
+      "OTP for registration — PresencePlus",
+      `Your OTP is: ${otp}\n\nThis OTP is valid for a single use only. Do not share it with anyone.`
+    );
+
+    if (result && result.success === false) {
+      console.error("OTP Mail Error:", result.message);
+      return res.status(400).json({ message: result.message });
     }
-  });
+
+    console.log("✅ OTP sent successfully to:", email);
+    return res.status(200).json({ message: "OTP sent successfully", otp });
+  } catch (err) {
+    console.error("OTP Mail Error:", err);
+    return res.status(400).json({ message: err.message });
+  }
 }
 
 const UserController = {
