@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import axios from "axios";
+import nodemailer from "nodemailer";
 
 // Status badge styles
 const STATUS_STYLES = {
@@ -10,66 +10,70 @@ const STATUS_STYLES = {
 };
 export default class Mailer {
   static async sendMail(to, subject, text, html = null) {
-    try {
-      console.log(`Sending email via Brevo to ${to}...`);
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.PASSWORD,
+    },
 
-      const apiKey = process.env.BREVO_API_KEY;
-      const senderEmail = process.env.EMAIL || "san431kumar@gmail.com";
+    // Timeout settings
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
 
-      if (!apiKey) {
-        throw new Error("BREVO_API_KEY is not set in environment variables!");
-      }
+  const mailOptions = {
+    from: `"PresencePlus" <${process.env.EMAIL}>`,
+    to,
+    subject,
+    text,
+    ...(html && { html }),
+  };
 
-      // Send mail using Brevo HTTP API
-      const response = await axios.post(
-        "https://api.brevo.com/v3/smtp/email",
-        {
-          sender: { name: "PresencePlus", email: senderEmail },
-          to: [{ email: to }],
-          subject: subject,
-          textContent: text,
-          ...(html && { htmlContent: html }),
-        },
-        {
-          headers: {
-            "api-key": apiKey,
-            "Content-Type": "application/json",
-            "accept": "application/json"
-          },
-        }
-      );
+  try {
+    // Verify SMTP connection
+    await transporter.verify();
+    console.log("SMTP server connected");
 
-      console.log("Mail sent successfully via Brevo:", response.data);
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error("Brevo API error:", error.response?.data || error.message);
-      return {
-        success: false,
-        message: error.response?.data?.message || error.message,
-      };
-    }
+    // Send mail
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Mail sent:", info.response);
+
+    return info;
+  } catch (error) {
+    console.error("Mailer error:", error);
+
+    return {
+      success: false,
+      message: error.message,
+    };
   }
+}
 
 
   // ── Attendance confirmation email ─────────────────────────────────
   static async sendAttendanceConfirmation({
-    studentEmail,
-    studentRegno,
-    sessionName,
-    sessionDate,
-    sessionTime,
-    teacherEmail,
-    status,
-    distance,
-  }) {
-    const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
-    const formattedDate = sessionDate
-      ? new Date(sessionDate).toLocaleDateString("en-IN", {
-        day: "numeric", month: "long", year: "numeric",
-      })
-      : "N/A";
+  studentEmail,
+  studentRegno,
+  sessionName,
+  sessionDate,
+  sessionTime,
+  teacherEmail,
+  status,
+  distance,
+}) {
+  const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
+  const formattedDate = sessionDate
+    ? new Date(sessionDate).toLocaleDateString("en-IN", {
+      day: "numeric", month: "long", year: "numeric",
+    })
+    : "N/A";
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -158,14 +162,14 @@ export default class Mailer {
 </html>
     `.trim();
 
-    const text = `Attendance Confirmed\n\nHi ${studentRegno || studentEmail},\n\nYour attendance has been recorded.\n\nSession: ${sessionName}\nDate: ${formattedDate}\nTime: ${sessionTime}\nDistance: ${distance}m\nTeacher: ${teacherEmail}\nStatus: ${status}\n\n— PresencePlus`;
+  const text = `Attendance Confirmed\n\nHi ${studentRegno || studentEmail},\n\nYour attendance has been recorded.\n\nSession: ${sessionName}\nDate: ${formattedDate}\nTime: ${sessionTime}\nDistance: ${distance}m\nTeacher: ${teacherEmail}\nStatus: ${status}\n\n— PresencePlus`;
 
-    return Mailer.sendMail(
-      studentEmail,
-      `✅ Attendance Confirmed — ${sessionName}`,
-      text,
-      html
-    );
-  }
+  return Mailer.sendMail(
+    studentEmail,
+    `✅ Attendance Confirmed — ${sessionName}`,
+    text,
+    html
+  );
+}
 }
 
