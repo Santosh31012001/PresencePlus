@@ -1,10 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-import { Resend } from "resend";
-
-// Initialize Resend with the provided API key (hardcoded or from env)
-// It's better to put this in your .env file as RESEND_API_KEY, but we will use your provided key.
-const resend = new Resend(process.env.RESEND_API_KEY || "re_gStPbPuZ_BeK91z6mdpyRX9xPtMQmsUDA");
+import axios from "axios";
 
 // Status badge styles
 const STATUS_STYLES = {
@@ -15,32 +11,41 @@ const STATUS_STYLES = {
 export default class Mailer {
   static async sendMail(to, subject, text, html = null) {
     try {
-      console.log(`Sending email via Resend to ${to}...`);
-      
-      // Send mail using Resend HTTP API
-      const { data, error } = await resend.emails.send({
-        from: "PresencePlus <onboarding@resend.dev>",
-        to: to,
-        subject: subject,
-        html: html || `<p>${text.replace(/\n/g, "<br>")}</p>`, // Resend requires HTML or text, but html handles breaks better
-        text: text
-      });
+      console.log(`Sending email via Brevo to ${to}...`);
 
-      if (error) {
-        console.error("Resend API error:", error);
-        return {
-          success: false,
-          message: error.message,
-        };
+      const apiKey = process.env.BREVO_API_KEY;
+      const senderEmail = process.env.EMAIL || "san431kumar@gmail.com";
+
+      if (!apiKey) {
+        throw new Error("BREVO_API_KEY is not set in environment variables!");
       }
 
-      console.log("Mail sent successfully via Resend:", data);
-      return { success: true, data };
+      // Send mail using Brevo HTTP API
+      const response = await axios.post(
+        "https://api.brevo.com/v3/smtp/email",
+        {
+          sender: { name: "PresencePlus", email: senderEmail },
+          to: [{ email: to }],
+          subject: subject,
+          textContent: text,
+          ...(html && { htmlContent: html }),
+        },
+        {
+          headers: {
+            "api-key": apiKey,
+            "Content-Type": "application/json",
+            "accept": "application/json"
+          },
+        }
+      );
+
+      console.log("Mail sent successfully via Brevo:", response.data);
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error("Mailer exception:", error);
+      console.error("Brevo API error:", error.response?.data || error.message);
       return {
         success: false,
-        message: error.message,
+        message: error.response?.data?.message || error.message,
       };
     }
   }
