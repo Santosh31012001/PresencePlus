@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// import { SHA256 } from "crypto-js";
+import { SHA256 } from "crypto-js";
 import axios from "axios";
 import "../styles/Login.css";
 import image512 from "../assets/logo512.png";
@@ -17,9 +17,10 @@ const Login = () => {
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const navigate = useNavigate();
 
-  // function computeHash(input) {
-  //   return SHA256(input).toString();
-  // }
+  // Hash must match Signup.js: SHA256(email + SHA256(password))
+  function hashPassword(email, password) {
+    return SHA256(email + SHA256(password).toString()).toString();
+  }
 
   const handleLoginSubmit = async (e) => {
     let session_id = "";
@@ -36,11 +37,9 @@ const Login = () => {
     let password = e.target.password.value;
 
     if (email.length > 0 && password.length > 0) {
-      // password = computeHash(password);
-      // password = computeHash(email + password);
       const formData = {
         email,
-        password,
+        password: hashPassword(email, password),
       };
       try {
         const response = await axios.post(

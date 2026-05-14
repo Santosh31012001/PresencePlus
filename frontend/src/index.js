@@ -32,7 +32,7 @@ root.render(
               boxShadow: "0 8px 32px rgba(2,6,23,0.5)",
             },
             success: { iconTheme: { primary: "#5be4a8", secondary: "#040714" } },
-            error:   { iconTheme: { primary: "#ff6b81", secondary: "#040714" } },
+            error: { iconTheme: { primary: "#ff6b81", secondary: "#040714" } },
           }}
         />
       </Theme>

@@ -17,24 +17,27 @@ const httpServer = createServer(app);
 
 // Allowed origins
 const allowedOrigins = [
-  "http://localhost:3000",
   "https://presence-plus.vercel.app",
 ];
+
+// Returns true if origin should be allowed
+function isOriginAllowed(origin) {
+  if (!origin) return true;                              // Postman / server-to-server
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;   // any localhost port
+  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true; // 127.0.0.1
+  if (allowedOrigins.includes(origin)) return true;     // explicit production origins
+  if (origin.includes("vercel.app")) return true;       // all vercel preview URLs
+  return false;
+}
 
 // CORS Middleware
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (Postman/mobile apps)
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.includes("vercel.app")
-      ) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error("Not allowed by CORS: " + origin));
       }
     },
     credentials: true,
@@ -45,15 +48,10 @@ app.use(
 const io = new Server(httpServer, {
   cors: {
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.includes("vercel.app")
-      ) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Socket CORS blocked"));
+        callback(new Error("Socket CORS blocked: " + origin));
       }
     },
     methods: ["GET", "POST"],
