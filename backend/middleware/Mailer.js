@@ -1,6 +1,10 @@
 import dotenv from "dotenv";
 dotenv.config();
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
+
+// Initialize Resend with the provided API key (hardcoded or from env)
+// It's better to put this in your .env file as RESEND_API_KEY, but we will use your provided key.
+const resend = new Resend(process.env.RESEND_API_KEY || "re_gStPbPuZ_BeK91z6mdpyRX9xPtMQmsUDA");
 
 // Status badge styles
 const STATUS_STYLES = {
@@ -10,70 +14,57 @@ const STATUS_STYLES = {
 };
 export default class Mailer {
   static async sendMail(to, subject, text, html = null) {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.PASSWORD,
-    },
+    try {
+      console.log(`Sending email via Resend to ${to}...`);
+      
+      // Send mail using Resend HTTP API
+      const { data, error } = await resend.emails.send({
+        from: "PresencePlus <onboarding@resend.dev>",
+        to: to,
+        subject: subject,
+        html: html || `<p>${text.replace(/\n/g, "<br>")}</p>`, // Resend requires HTML or text, but html handles breaks better
+        text: text
+      });
 
-    // Timeout settings
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-  });
+      if (error) {
+        console.error("Resend API error:", error);
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
 
-  const mailOptions = {
-    from: `"PresencePlus" <${process.env.EMAIL}>`,
-    to,
-    subject,
-    text,
-    ...(html && { html }),
-  };
-
-  try {
-    // Verify SMTP connection
-    await transporter.verify();
-    console.log("SMTP server connected");
-
-    // Send mail
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("Mail sent:", info.response);
-
-    return info;
-  } catch (error) {
-    console.error("Mailer error:", error);
-
-    return {
-      success: false,
-      message: error.message,
-    };
+      console.log("Mail sent successfully via Resend:", data);
+      return { success: true, data };
+    } catch (error) {
+      console.error("Mailer exception:", error);
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
   }
-}
 
 
   // ── Attendance confirmation email ─────────────────────────────────
   static async sendAttendanceConfirmation({
-  studentEmail,
-  studentRegno,
-  sessionName,
-  sessionDate,
-  sessionTime,
-  teacherEmail,
-  status,
-  distance,
-}) {
-  const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
-  const formattedDate = sessionDate
-    ? new Date(sessionDate).toLocaleDateString("en-IN", {
-      day: "numeric", month: "long", year: "numeric",
-    })
-    : "N/A";
+    studentEmail,
+    studentRegno,
+    sessionName,
+    sessionDate,
+    sessionTime,
+    teacherEmail,
+    status,
+    distance,
+  }) {
+    const style = STATUS_STYLES[status] || STATUS_STYLES["SUSPICIOUS"];
+    const formattedDate = sessionDate
+      ? new Date(sessionDate).toLocaleDateString("en-IN", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+      : "N/A";
 
-  const html = `
+    const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -162,14 +153,14 @@ export default class Mailer {
 </html>
     `.trim();
 
-  const text = `Attendance Confirmed\n\nHi ${studentRegno || studentEmail},\n\nYour attendance has been recorded.\n\nSession: ${sessionName}\nDate: ${formattedDate}\nTime: ${sessionTime}\nDistance: ${distance}m\nTeacher: ${teacherEmail}\nStatus: ${status}\n\n— PresencePlus`;
+    const text = `Attendance Confirmed\n\nHi ${studentRegno || studentEmail},\n\nYour attendance has been recorded.\n\nSession: ${sessionName}\nDate: ${formattedDate}\nTime: ${sessionTime}\nDistance: ${distance}m\nTeacher: ${teacherEmail}\nStatus: ${status}\n\n— PresencePlus`;
 
-  return Mailer.sendMail(
-    studentEmail,
-    `✅ Attendance Confirmed — ${sessionName}`,
-    text,
-    html
-  );
-}
+    return Mailer.sendMail(
+      studentEmail,
+      `✅ Attendance Confirmed — ${sessionName}`,
+      text,
+      html
+    );
+  }
 }
 
